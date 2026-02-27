@@ -27,6 +27,7 @@ export default function AuthButton({ user }: AuthButtonProps) {
   const mounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   const router = useRouter()
   const supabase = createClient()
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
 
   const closeModal = () => {
     setShowLogin(false)
@@ -52,7 +53,7 @@ export default function AuthButton({ user }: AuthButtonProps) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${siteUrl}/auth/callback`,
           data: { username: username || `user_${Date.now().toString(36)}` },
         },
       })
@@ -79,7 +80,7 @@ export default function AuthButton({ user }: AuthButtonProps) {
     setMessage(null)
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+      redirectTo: `${siteUrl}/auth/callback?next=/auth/reset-password`,
     })
 
     if (error) {
