@@ -76,8 +76,8 @@ export default function AuthButton({ user }: AuthButtonProps) {
       </button>
 
       {showLogin && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-sm">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-sm my-auto relative">
             <h2 className="text-xl font-bold mb-4">{isSignUp ? 'Create account' : 'Sign in'}</h2>
             <form onSubmit={handleAuth} className="space-y-3">
               {isSignUp && (
@@ -128,7 +128,7 @@ export default function AuthButton({ user }: AuthButtonProps) {
             </p>
             <button
               onClick={() => setShowLogin(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white"
+              className="absolute top-3 right-4 text-zinc-400 hover:text-white text-lg"
             >
               ✕
             </button>
