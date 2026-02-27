@@ -1,7 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
+
+const subscribe = () => () => {}
+const getSnapshot = () => true
+const getServerSnapshot = () => false
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -18,11 +22,9 @@ export default function AuthButton({ user }: AuthButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
+  const mounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   const router = useRouter()
   const supabase = createClient()
-
-  useEffect(() => { setMounted(true) }, [])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
