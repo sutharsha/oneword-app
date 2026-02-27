@@ -14,5 +14,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/`)
+  // Forward to `next` on failure so destination pages can show their own error UI
+  const fallback = next !== '/' ? next : '/'
+  return NextResponse.redirect(`${origin}${fallback}`)
 }

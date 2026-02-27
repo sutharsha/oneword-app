@@ -9,6 +9,8 @@ const getServerSnapshot = () => false
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+type AuthView = 'signIn' | 'signUp' | 'forgotPassword'
+
 interface AuthButtonProps {
   user: { id: string; email?: string } | null
 }
@@ -18,7 +20,7 @@ export default function AuthButton({ user }: AuthButtonProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [view, setView] = useState<AuthView>('signIn')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -26,13 +28,26 @@ export default function AuthButton({ user }: AuthButtonProps) {
   const router = useRouter()
   const supabase = createClient()
 
+  const closeModal = () => {
+    setShowLogin(false)
+    setView('signIn')
+    setError(null)
+    setMessage(null)
+  }
+
+  const switchView = (newView: AuthView) => {
+    setView(newView)
+    setError(null)
+    setMessage(null)
+  }
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
     setMessage(null)
 
-    if (isSignUp) {
+    if (view === 'signUp') {
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -44,15 +59,33 @@ export default function AuthButton({ user }: AuthButtonProps) {
       if (error) setError(error.message)
       else {
         setMessage('Check your email to confirm your account!')
-        setShowLogin(false)
+        closeModal()
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setError(error.message)
       else {
-        setShowLogin(false)
+        closeModal()
         router.refresh()
       }
+    }
+    setLoading(false)
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setMessage(null)
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+    })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setMessage('Check your email for a password reset link.')
     }
     setLoading(false)
   }
@@ -73,6 +106,8 @@ export default function AuthButton({ user }: AuthButtonProps) {
     )
   }
 
+  const title = view === 'signUp' ? 'Create account' : view === 'forgotPassword' ? 'Reset password' : 'Sign in'
+
   return (
     <>
       <button
@@ -85,56 +120,105 @@ export default function AuthButton({ user }: AuthButtonProps) {
       {showLogin && mounted && createPortal(
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4 overflow-y-auto">
           <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-sm my-auto relative">
-            <h2 className="text-xl font-bold mb-4">{isSignUp ? 'Create account' : 'Sign in'}</h2>
-            <form onSubmit={handleAuth} className="space-y-3">
-              {isSignUp && (
+            <h2 className="text-xl font-bold mb-4">{title}</h2>
+
+            {view === 'forgotPassword' ? (
+              <form onSubmit={handleForgotPassword} className="space-y-3">
+                <p className="text-sm text-zinc-400">
+                  Enter your email and we&apos;ll send you a link to reset your password.
+                </p>
                 <input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
                   required
                 />
-              )}
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
-                required
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
-                required
-                minLength={6}
-              />
-              {error && <p className="text-red-400 text-sm">{error}</p>}
-              {message && <p className="text-green-400 text-sm">{message}</p>}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 py-2 rounded-lg font-semibold transition-colors"
-              >
-                {loading ? '...' : isSignUp ? 'Create account' : 'Sign in'}
-              </button>
-            </form>
+                {error && <p className="text-red-400 text-sm">{error}</p>}
+                {message && <p className="text-green-400 text-sm">{message}</p>}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  {loading ? '...' : 'Send reset link'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleAuth} className="space-y-3">
+                {view === 'signUp' && (
+                  <input
+                    type="text"
+                    placeholder="Username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
+                    required
+                  />
+                )}
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
+                  required
+                  minLength={6}
+                />
+                {view === 'signIn' && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => switchView('forgotPassword')}
+                      className="text-sm text-purple-400 hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+                {error && <p className="text-red-400 text-sm">{error}</p>}
+                {message && <p className="text-green-400 text-sm">{message}</p>}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  {loading ? '...' : view === 'signUp' ? 'Create account' : 'Sign in'}
+                </button>
+              </form>
+            )}
+
             <p className="text-sm text-zinc-400 mt-3 text-center">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-              <button
-                onClick={() => { setIsSignUp(!isSignUp); setError(null) }}
-                className="text-purple-400 hover:underline"
-              >
-                {isSignUp ? 'Sign in' : 'Sign up'}
-              </button>
+              {view === 'forgotPassword' ? (
+                <button
+                  onClick={() => switchView('signIn')}
+                  className="text-purple-400 hover:underline"
+                >
+                  Back to sign in
+                </button>
+              ) : (
+                <>
+                  {view === 'signUp' ? 'Already have an account?' : "Don't have an account?"}{' '}
+                  <button
+                    onClick={() => switchView(view === 'signUp' ? 'signIn' : 'signUp')}
+                    className="text-purple-400 hover:underline"
+                  >
+                    {view === 'signUp' ? 'Sign in' : 'Sign up'}
+                  </button>
+                </>
+              )}
             </p>
             <button
-              onClick={() => setShowLogin(false)}
+              onClick={closeModal}
               className="absolute top-3 right-4 text-zinc-400 hover:text-white text-lg"
             >
               ✕
