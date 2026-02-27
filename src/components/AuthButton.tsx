@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -17,8 +18,11 @@ export default function AuthButton({ user }: AuthButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => { setMounted(true) }, [])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,8 +79,8 @@ export default function AuthButton({ user }: AuthButtonProps) {
         Sign in
       </button>
 
-      {showLogin && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      {showLogin && mounted && createPortal(
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4 overflow-y-auto">
           <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-sm my-auto relative">
             <h2 className="text-xl font-bold mb-4">{isSignUp ? 'Create account' : 'Sign in'}</h2>
             <form onSubmit={handleAuth} className="space-y-3">
@@ -133,7 +137,8 @@ export default function AuthButton({ user }: AuthButtonProps) {
               ✕
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
