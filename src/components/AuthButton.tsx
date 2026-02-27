@@ -37,6 +37,7 @@ export default function AuthButton({ user }: AuthButtonProps) {
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: { username: username || `user_${Date.now().toString(36)}` },
         },
       })
