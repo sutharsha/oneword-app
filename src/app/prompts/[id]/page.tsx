@@ -44,6 +44,17 @@ export default async function PromptDetailPage({
 
   if (!prompt) notFound()
 
+  // Get unread notification count
+  let unreadCount = 0
+  if (user) {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('read', false)
+    unreadCount = count || 0
+  }
+
   // Fetch words for this prompt
   const { data: words } = await supabase
     .from('words')
@@ -53,7 +64,7 @@ export default async function PromptDetailPage({
       user_id,
       prompt_id,
       created_at,
-      profiles (id, username, display_name, avatar_url)
+      profiles (id, username, display_name, avatar_url, current_streak)
     `)
     .eq('prompt_id', id)
     .order('created_at', { ascending: false })
@@ -80,7 +91,7 @@ export default async function PromptDetailPage({
 
   return (
     <main className="max-w-lg mx-auto min-h-screen border-x border-zinc-800">
-      <Header user={user ? { id: user.id, email: user.email } : null} />
+      <Header user={user ? { id: user.id, email: user.email } : null} unreadNotifications={unreadCount} />
 
       {/* Prompt header */}
       <div className="p-4 border-b border-zinc-800">
@@ -116,6 +127,8 @@ export default async function PromptDetailPage({
                 userReaction={userReactionMap[w.id] || null}
                 currentUserId={user?.id || null}
                 wordUserId={w.user_id}
+                promptId={w.prompt_id}
+                streakCount={profile?.current_streak || 0}
               />
             )
           })

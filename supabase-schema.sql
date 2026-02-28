@@ -127,3 +127,106 @@ $$ language plpgsql security definer;
 create or replace trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ============================================
+-- Phase 3: Social & Engagement
+-- ============================================
+
+-- Follows
+create table public.follows (
+  id uuid default gen_random_uuid() primary key,
+  follower_id uuid references public.profiles(id) on delete cascade not null,
+  following_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now() not null,
+  unique(follower_id, following_id),
+  check (follower_id != following_id)
+);
+
+alter table public.follows enable row level security;
+
+create policy "Follows are viewable by everyone"
+  on public.follows for select using (true);
+
+create policy "Authenticated users can follow"
+  on public.follows for insert with check (auth.uid() = follower_id);
+
+create policy "Users can unfollow"
+  on public.follows for delete using (auth.uid() = follower_id);
+
+create index follows_follower_id_idx on public.follows (follower_id);
+create index follows_following_id_idx on public.follows (following_id);
+
+-- Notifications
+create table public.notifications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  actor_id uuid references public.profiles(id) on delete cascade not null,
+  type text not null check (type in ('reaction', 'follow')),
+  word_id uuid references public.words(id) on delete cascade,
+  emoji text,
+  read boolean default false not null,
+  created_at timestamptz default now() not null
+);
+
+alter table public.notifications enable row level security;
+
+create policy "Users can view own notifications"
+  on public.notifications for select using (auth.uid() = user_id);
+
+create policy "Authenticated users can create notifications"
+  on public.notifications for insert with check (auth.uid() = actor_id);
+
+create policy "Users can update own notifications"
+  on public.notifications for update using (auth.uid() = user_id);
+
+create policy "Users can delete own notifications"
+  on public.notifications for delete using (auth.uid() = user_id);
+
+create index notifications_user_id_idx on public.notifications (user_id, read, created_at desc);
+create index notifications_actor_id_idx on public.notifications (actor_id);
+
+-- Streaks (added to profiles)
+alter table public.profiles
+  add column current_streak integer default 0 not null,
+  add column longest_streak integer default 0 not null,
+  add column last_post_date date;
+
+-- Function to update streak when a word is posted
+create or replace function public.update_streak()
+returns trigger as $$
+declare
+  v_last_date date;
+  v_current int;
+  v_longest int;
+  v_today date := current_date;
+begin
+  select last_post_date, current_streak, longest_streak
+  into v_last_date, v_current, v_longest
+  from public.profiles
+  where id = new.user_id;
+
+  if v_last_date = v_today then
+    return new;
+  elsif v_last_date = v_today - 1 then
+    v_current := v_current + 1;
+  else
+    v_current := 1;
+  end if;
+
+  if v_current > v_longest then
+    v_longest := v_current;
+  end if;
+
+  update public.profiles
+  set current_streak = v_current,
+      longest_streak = v_longest,
+      last_post_date = v_today
+  where id = new.user_id;
+
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_word_posted
+  after insert on public.words
+  for each row execute function public.update_streak();

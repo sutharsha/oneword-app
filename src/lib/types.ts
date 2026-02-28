@@ -4,6 +4,9 @@ export interface Profile {
   display_name: string | null
   avatar_url: string | null
   created_at: string
+  current_streak: number
+  longest_streak: number
+  last_post_date: string | null
 }
 
 export interface Prompt {
@@ -31,3 +34,23 @@ export interface ReactionCount {
 export type ReactionEmoji = '🔥' | '👀' | '💀' | '❤️' | '🤔'
 
 export const REACTION_EMOJIS: ReactionEmoji[] = ['🔥', '👀', '💀', '❤️', '🤔']
+
+export interface Follow {
+  id: string
+  follower_id: string
+  following_id: string
+  created_at: string
+}
+
+export interface Notification {
+  id: string
+  user_id: string
+  actor_id: string
+  type: 'reaction' | 'follow'
+  word_id: string | null
+  emoji: string | null
+  read: boolean
+  created_at: string
+  actor?: Profile
+  word?: { word: string } | null
+}

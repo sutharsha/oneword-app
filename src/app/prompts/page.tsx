@@ -14,6 +14,17 @@ export default async function PromptsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Get unread notification count
+  let unreadCount = 0
+  if (user) {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('read', false)
+    unreadCount = count || 0
+  }
+
   // Fetch all prompts
   const { data: prompts } = await supabase
     .from('prompts')
@@ -40,7 +51,7 @@ export default async function PromptsPage() {
 
   return (
     <main className="max-w-lg mx-auto min-h-screen border-x border-zinc-800">
-      <Header user={user ? { id: user.id, email: user.email } : null} />
+      <Header user={user ? { id: user.id, email: user.email } : null} unreadNotifications={unreadCount} />
 
       <div className="p-4 border-b border-zinc-800">
         <h2 className="text-lg font-bold">Prompt Archive</h2>

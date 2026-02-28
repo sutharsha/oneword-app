@@ -8,6 +8,7 @@ import { createRateLimiter } from '@/lib/rate-limit'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import ShareButton from '@/components/ShareButton'
 
 interface WordPostProps {
   id: string
@@ -20,6 +21,8 @@ interface WordPostProps {
   userReaction: string | null
   currentUserId: string | null
   wordUserId?: string
+  promptId?: string | null
+  streakCount?: number
 }
 
 export default function WordPost({
@@ -33,6 +36,8 @@ export default function WordPost({
   userReaction: initialReaction,
   currentUserId,
   wordUserId,
+  promptId,
+  streakCount,
 }: WordPostProps) {
   const [reactionCounts, setReactionCounts] = useState(initialCounts)
   const [userReaction, setUserReaction] = useState(initialReaction)
@@ -106,6 +111,20 @@ export default function WordPost({
         })
 
         if (error) throw error
+
+        // Send notification to post owner (don't block)
+        if (wordUserId && wordUserId !== currentUserId) {
+          supabase
+            .from('notifications')
+            .insert({
+              user_id: wordUserId,
+              actor_id: currentUserId,
+              type: 'reaction',
+              word_id: id,
+              emoji,
+            })
+            .then(() => {})
+        }
       }
     } catch {
       // Rollback on failure
@@ -173,6 +192,11 @@ export default function WordPost({
             <span className="text-zinc-500 text-xs">
               {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
             </span>
+            {streakCount && streakCount >= 2 ? (
+              <span className="text-orange-400 text-xs font-semibold" title={`${streakCount}-day streak`}>
+                {streakCount}d
+              </span>
+            ) : null}
           </div>
           <p className="text-3xl font-bold mt-2 mb-3">{word}</p>
           <div className="flex items-center gap-1 relative">
@@ -190,6 +214,8 @@ export default function WordPost({
                 <span className="ml-1 text-zinc-500">{totalReactions}</span>
               )}
             </button>
+
+            <ShareButton word={word} username={username} wordId={promptId || id} />
 
             {isOwner && !showDeleteConfirm && (
               <button
