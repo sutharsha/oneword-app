@@ -45,14 +45,22 @@ export default function PostWord({ userId, promptId, promptQuestion }: PostWordP
     })
 
     if (insertError) {
-      setError(insertError.message)
+      if (insertError.code === '23505') {
+        setError('You already posted today.')
+      } else {
+        setError(insertError.message)
+      }
       setPosting(false)
       return
     }
 
     setWord('')
     setPosting(false)
-    router.refresh()
+    try {
+      router.refresh()
+    } catch {
+      // Refresh failed — post was saved, page will update on next load
+    }
   }
 
   return (
