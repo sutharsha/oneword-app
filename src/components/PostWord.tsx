@@ -54,6 +54,16 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
     setError(null)
 
     const supabase = createClient()
+
+    // Dev bypass: delete existing word for this prompt so re-post succeeds
+    if (devBypass && promptId) {
+      await supabase
+        .from('words')
+        .delete()
+        .eq('user_id', userId)
+        .eq('prompt_id', promptId)
+    }
+
     const { error: insertError } = await supabase.from('words').insert({
       user_id: userId,
       word: trimmed,
