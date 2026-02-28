@@ -2,10 +2,29 @@ import { createClient } from '@/lib/supabase/server'
 import WordPost from '@/components/WordPost'
 import PostWord from '@/components/PostWord'
 import AuthButton from '@/components/AuthButton'
+import FeedSkeleton from '@/components/FeedSkeleton'
+import { Suspense } from 'react'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
 
-export default async function Home() {
+export const metadata: Metadata = {
+  title: 'OneWord — Say one word.',
+  description: 'A social feed where you can only say one word. Answer the daily prompt with a single word and react to others.',
+  openGraph: {
+    title: 'OneWord — Say one word.',
+    description: 'A social feed where you can only say one word.',
+    type: 'website',
+    siteName: 'OneWord',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'OneWord — Say one word.',
+    description: 'A social feed where you can only say one word.',
+  },
+}
+
+async function Feed() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -13,6 +32,19 @@ export default async function Home() {
   // Get today's prompt
   const { data: prompts } = await supabase.rpc('get_todays_prompt')
   const todaysPrompt = prompts?.[0] || null
+
+  // Check if user already posted to today's prompt
+  let hasPostedToday = false
+  if (user && todaysPrompt) {
+    const { data: existingPost } = await supabase
+      .from('words')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('prompt_id', todaysPrompt.id)
+      .limit(1)
+      .maybeSingle()
+    hasPostedToday = !!existingPost
+  }
 
   // Get words feed
   const { data: words } = await supabase
@@ -50,21 +82,14 @@ export default async function Home() {
   })
 
   return (
-    <main className="max-w-lg mx-auto min-h-screen border-x border-zinc-800">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-md border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight">
-          <span className="text-purple-400">One</span>Word
-        </h1>
-        <AuthButton user={user ? { id: user.id, email: user.email } : null} />
-      </header>
-
+    <>
       {/* Post box */}
       {user && (
         <PostWord
           userId={user.id}
           promptId={todaysPrompt?.id || null}
           promptQuestion={todaysPrompt?.question || null}
+          hasPostedToday={hasPostedToday}
         />
       )}
 
@@ -104,6 +129,27 @@ export default async function Home() {
           </div>
         )}
       </div>
+    </>
+  )
+}
+
+export default async function Home() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  return (
+    <main className="max-w-lg mx-auto min-h-screen border-x border-zinc-800">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-md border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold tracking-tight">
+          <span className="text-purple-400">One</span>Word
+        </h1>
+        <AuthButton user={user ? { id: user.id, email: user.email } : null} />
+      </header>
+
+      <Suspense fallback={<FeedSkeleton />}>
+        <Feed />
+      </Suspense>
     </main>
   )
 }

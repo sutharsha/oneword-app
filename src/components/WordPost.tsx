@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { REACTION_EMOJIS, type ReactionEmoji } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
+import { createRateLimiter } from '@/lib/rate-limit'
 
 interface WordPostProps {
   id: string
@@ -30,9 +31,11 @@ export default function WordPost({
   const [userReaction, setUserReaction] = useState(initialReaction)
   const [showReactions, setShowReactions] = useState(false)
   const [reacting, setReacting] = useState(false)
+  const rateLimiter = useRef(createRateLimiter(10, 30_000))
 
   const handleReact = async (emoji: ReactionEmoji) => {
     if (!currentUserId || reacting) return
+    if (!rateLimiter.current.check()) return
     setReacting(true)
     const supabase = createClient()
 

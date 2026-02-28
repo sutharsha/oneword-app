@@ -92,7 +92,9 @@ export default function AuthButton({ user }: AuthButtonProps) {
   }
 
   const handleSignOut = async () => {
+    setLoading(true)
     await supabase.auth.signOut()
+    setLoading(false)
     router.refresh()
   }
 
@@ -100,9 +102,10 @@ export default function AuthButton({ user }: AuthButtonProps) {
     return (
       <button
         onClick={handleSignOut}
-        className="text-sm text-zinc-400 hover:text-white transition-colors"
+        disabled={loading}
+        className="text-sm text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
       >
-        Sign out
+        {loading ? 'Signing out...' : 'Sign out'}
       </button>
     )
   }
@@ -143,7 +146,7 @@ export default function AuthButton({ user }: AuthButtonProps) {
                   disabled={loading}
                   className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 py-2 rounded-lg font-semibold transition-colors"
                 >
-                  {loading ? '...' : 'Send reset link'}
+                  {loading ? 'Sending...' : 'Send reset link'}
                 </button>
               </form>
             ) : (
@@ -193,7 +196,7 @@ export default function AuthButton({ user }: AuthButtonProps) {
                   disabled={loading}
                   className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 py-2 rounded-lg font-semibold transition-colors"
                 >
-                  {loading ? '...' : view === 'signUp' ? 'Create account' : 'Sign in'}
+                  {loading ? (view === 'signUp' ? 'Creating...' : 'Signing in...') : view === 'signUp' ? 'Create account' : 'Sign in'}
                 </button>
               </form>
             )}

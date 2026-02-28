@@ -77,6 +77,10 @@ create policy "Authenticated users can react"
 create policy "Users can remove own reactions"
   on public.reactions for delete using (auth.uid() = user_id);
 
+-- One word per user per prompt
+alter table public.words
+  add constraint words_user_id_prompt_id_unique unique (user_id, prompt_id);
+
 -- Indexes
 create index words_created_at_idx on public.words (created_at desc);
 create index words_user_id_idx on public.words (user_id);

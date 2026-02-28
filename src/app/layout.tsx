@@ -1,12 +1,39 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const viewport: Viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+}
+
 export const metadata: Metadata = {
-  title: "OneWord — Say one word.",
-  description: "A social feed where you can only say one word.",
+  title: {
+    default: "OneWord — Say one word.",
+    template: "%s | OneWord",
+  },
+  description: "A social feed where you can only say one word. Answer the daily prompt with a single word and react to others.",
+  keywords: ["social", "one word", "daily prompt", "feed", "reactions"],
+  authors: [{ name: "OneWord" }],
+  openGraph: {
+    title: "OneWord — Say one word.",
+    description: "A social feed where you can only say one word.",
+    type: "website",
+    siteName: "OneWord",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "OneWord — Say one word.",
+    description: "A social feed where you can only say one word.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
