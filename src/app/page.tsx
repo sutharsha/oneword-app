@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import WordPost from '@/components/WordPost'
 import PostWord from '@/components/PostWord'
-import AuthButton from '@/components/AuthButton'
+import Header from '@/components/Header'
 import FeedSkeleton from '@/components/FeedSkeleton'
 import { Suspense } from 'react'
+import Link from 'next/link'
+import { startOfDay, subDays } from 'date-fns'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -24,7 +26,15 @@ export const metadata: Metadata = {
   },
 }
 
-async function Feed() {
+type FilterType = 'today' | 'week' | 'all'
+
+const FILTERS: { key: FilterType; label: string }[] = [
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: 'This Week' },
+  { key: 'all', label: 'All Time' },
+]
+
+async function Feed({ filter }: { filter: FilterType }) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,8 +56,8 @@ async function Feed() {
     hasPostedToday = !!existingPost
   }
 
-  // Get words feed
-  const { data: words } = await supabase
+  // Build words query with filter
+  let query = supabase
     .from('words')
     .select(`
       id,
@@ -59,6 +69,14 @@ async function Feed() {
     `)
     .order('created_at', { ascending: false })
     .limit(50)
+
+  if (filter === 'today') {
+    query = query.gte('created_at', startOfDay(new Date()).toISOString())
+  } else if (filter === 'week') {
+    query = query.gte('created_at', startOfDay(subDays(new Date(), 7)).toISOString())
+  }
+
+  const { data: words } = await query
 
   // Get reactions for these words
   const wordIds = words?.map((w) => w.id) || []
@@ -114,10 +132,12 @@ async function Feed() {
                 word={w.word}
                 username={profile?.username || 'anonymous'}
                 displayName={profile?.display_name || null}
+                avatarUrl={profile?.avatar_url || null}
                 createdAt={w.created_at}
                 reactionCounts={reactionMap[w.id] || {}}
                 userReaction={userReactionMap[w.id] || null}
                 currentUserId={user?.id || null}
+                wordUserId={w.user_id}
               />
             )
           })
@@ -133,22 +153,39 @@ async function Feed() {
   )
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>
+}) {
+  const params = await searchParams
+  const filter = (['today', 'week', 'all'].includes(params.filter || '') ? params.filter : 'today') as FilterType
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   return (
     <main className="max-w-lg mx-auto min-h-screen border-x border-zinc-800">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-md border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight">
-          <span className="text-purple-400">One</span>Word
-        </h1>
-        <AuthButton user={user ? { id: user.id, email: user.email } : null} />
-      </header>
+      <Header user={user ? { id: user.id, email: user.email } : null} />
+
+      {/* Filter Tabs */}
+      <div className="flex border-b border-zinc-800">
+        {FILTERS.map(({ key, label }) => (
+          <Link
+            key={key}
+            href={key === 'today' ? '/' : `/?filter=${key}`}
+            className={`flex-1 text-center py-3 text-sm font-medium transition-colors ${
+              filter === key
+                ? 'text-purple-400 border-b-2 border-purple-400'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
 
       <Suspense fallback={<FeedSkeleton />}>
-        <Feed />
+        <Feed filter={filter} />
       </Suspense>
     </main>
   )

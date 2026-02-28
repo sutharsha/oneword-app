@@ -5,16 +5,21 @@ import { formatDistanceToNow } from 'date-fns'
 import { REACTION_EMOJIS, type ReactionEmoji } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { createRateLimiter } from '@/lib/rate-limit'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import Image from 'next/image'
 
 interface WordPostProps {
   id: string
   word: string
   username: string
   displayName: string | null
+  avatarUrl?: string | null
   createdAt: string
   reactionCounts: Record<string, number>
   userReaction: string | null
   currentUserId: string | null
+  wordUserId?: string
 }
 
 export default function WordPost({
@@ -22,16 +27,25 @@ export default function WordPost({
   word,
   username,
   displayName,
+  avatarUrl,
   createdAt,
   reactionCounts: initialCounts,
   userReaction: initialReaction,
   currentUserId,
+  wordUserId,
 }: WordPostProps) {
   const [reactionCounts, setReactionCounts] = useState(initialCounts)
   const [userReaction, setUserReaction] = useState(initialReaction)
   const [showReactions, setShowReactions] = useState(false)
   const [reacting, setReacting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleted, setDeleted] = useState(false)
   const rateLimiter = useRef(createRateLimiter(10, 30_000))
+  const deleteRateLimiter = useRef(createRateLimiter(3, 60_000))
+  const router = useRouter()
+
+  const isOwner = currentUserId && wordUserId && currentUserId === wordUserId
 
   const handleReact = async (emoji: ReactionEmoji) => {
     if (!currentUserId || reacting) return
@@ -103,18 +117,58 @@ export default function WordPost({
     setShowReactions(false)
   }
 
+  const handleDelete = async () => {
+    if (!isOwner || deleting) return
+    if (!deleteRateLimiter.current.check()) return
+
+    setDeleting(true)
+    const supabase = createClient()
+
+    const { error } = await supabase
+      .from('words')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+      return
+    }
+
+    setDeleted(true)
+    router.refresh()
+  }
+
+  if (deleted) return null
+
   const totalReactions = Object.values(reactionCounts).reduce((a, b) => a + b, 0)
 
   return (
     <div className="border-b border-zinc-800 px-4 py-5 hover:bg-zinc-950 transition-colors">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm font-bold shrink-0">
-          {(displayName || username || '?')[0].toUpperCase()}
-        </div>
+        <Link href={`/profile/${username}`} className="shrink-0">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt={username}
+              width={40}
+              height={40}
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm font-bold">
+              {(displayName || username || '?')[0].toUpperCase()}
+            </div>
+          )}
+        </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm">{displayName || username}</span>
-            <span className="text-zinc-500 text-sm">@{username}</span>
+            <Link href={`/profile/${username}`} className="font-semibold text-sm hover:underline">
+              {displayName || username}
+            </Link>
+            <Link href={`/profile/${username}`} className="text-zinc-500 text-sm hover:underline">
+              @{username}
+            </Link>
             <span className="text-zinc-600 text-xs">·</span>
             <span className="text-zinc-500 text-xs">
               {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
@@ -136,6 +190,35 @@ export default function WordPost({
                 <span className="ml-1 text-zinc-500">{totalReactions}</span>
               )}
             </button>
+
+            {isOwner && !showDeleteConfirm && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-sm px-2 py-1 rounded-full text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition-colors ml-auto"
+                title="Delete"
+              >
+                🗑
+              </button>
+            )}
+
+            {showDeleteConfirm && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-xs text-zinc-400">Delete?</span>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-xs px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white font-medium transition-colors disabled:opacity-50"
+                >
+                  {deleting ? '...' : 'Yes'}
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="text-xs px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 font-medium transition-colors"
+                >
+                  No
+                </button>
+              </div>
+            )}
 
             {showReactions && (
               <div className="absolute bottom-full left-0 mb-1 bg-zinc-900 border border-zinc-700 rounded-full px-2 py-1 flex gap-1 shadow-lg z-10">
