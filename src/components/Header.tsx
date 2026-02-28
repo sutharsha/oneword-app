@@ -5,9 +5,10 @@ import NotificationBell from '@/components/NotificationBell'
 interface HeaderProps {
   user: { id: string; email?: string } | null
   unreadNotifications?: number
+  isAdmin?: boolean
 }
 
-export default function Header({ user, unreadNotifications = 0 }: HeaderProps) {
+export default function Header({ user, unreadNotifications = 0, isAdmin = false }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-md border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-4">
@@ -20,6 +21,14 @@ export default function Header({ user, unreadNotifications = 0 }: HeaderProps) {
         >
           Archive
         </Link>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
+          >
+            Admin
+          </Link>
+        )}
       </div>
       <div className="flex items-center gap-3">
         {user && (

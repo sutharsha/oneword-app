@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { createRateLimiter } from '@/lib/rate-limit'
+import { validateWord } from '@/lib/validation'
 
 interface PostWordProps {
   userId: string
@@ -26,19 +27,10 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
     setAnswered(hasPostedToday)
   }, [hasPostedToday])
 
-  const validate = (input: string): string | null => {
-    const trimmed = input.trim()
-    if (!trimmed) return 'Say something.'
-    if (trimmed.includes(' ')) return 'One word only.'
-    if (trimmed.length > 45) return 'Too long.'
-    if (!/^[a-zA-Z'\-]+$/.test(trimmed)) return 'Letters only.'
-    return null
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = word.trim().toLowerCase()
-    const validationError = validate(trimmed)
+    const validationError = validateWord(trimmed)
     if (validationError) {
       setError(validationError)
       return

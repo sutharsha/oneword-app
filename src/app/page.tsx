@@ -198,8 +198,9 @@ export default async function Home({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Get unread notification count
+  // Get unread notification count and admin status
   let unreadCount = 0
+  let isAdmin = false
   if (user) {
     const { count } = await supabase
       .from('notifications')
@@ -207,6 +208,13 @@ export default async function Home({
       .eq('user_id', user.id)
       .eq('read', false)
     unreadCount = count || 0
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+    isAdmin = profile?.is_admin || false
   }
 
   return (
@@ -214,6 +222,7 @@ export default async function Home({
       <Header
         user={user ? { id: user.id, email: user.email } : null}
         unreadNotifications={unreadCount}
+        isAdmin={isAdmin}
       />
 
       {/* Filter Tabs */}

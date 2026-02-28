@@ -7,6 +7,7 @@ export interface Profile {
   current_streak: number
   longest_streak: number
   last_post_date: string | null
+  is_admin: boolean
 }
 
 export interface Prompt {
