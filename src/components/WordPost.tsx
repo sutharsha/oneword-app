@@ -29,51 +29,73 @@ export default function WordPost({
   const [reactionCounts, setReactionCounts] = useState(initialCounts)
   const [userReaction, setUserReaction] = useState(initialReaction)
   const [showReactions, setShowReactions] = useState(false)
+  const [reacting, setReacting] = useState(false)
 
   const handleReact = async (emoji: ReactionEmoji) => {
-    if (!currentUserId) return
+    if (!currentUserId || reacting) return
+    setReacting(true)
     const supabase = createClient()
 
-    if (userReaction === emoji) {
-      // Remove reaction
-      await supabase
-        .from('reactions')
-        .delete()
-        .eq('word_id', id)
-        .eq('user_id', currentUserId)
+    const prevCounts = { ...reactionCounts }
+    const prevReaction = userReaction
 
-      setReactionCounts((prev) => ({
-        ...prev,
-        [emoji]: Math.max(0, (prev[emoji] || 0) - 1),
-      }))
-      setUserReaction(null)
-    } else {
-      // Remove old reaction if exists
-      if (userReaction) {
-        await supabase
+    try {
+      if (userReaction === emoji) {
+        // Optimistic update
+        setReactionCounts((prev) => ({
+          ...prev,
+          [emoji]: Math.max(0, (prev[emoji] || 0) - 1),
+        }))
+        setUserReaction(null)
+
+        // Remove reaction
+        const { error } = await supabase
           .from('reactions')
           .delete()
           .eq('word_id', id)
           .eq('user_id', currentUserId)
 
+        if (error) throw error
+      } else {
+        // Optimistic update
+        if (userReaction) {
+          setReactionCounts((prev) => ({
+            ...prev,
+            [userReaction]: Math.max(0, (prev[userReaction] || 0) - 1),
+          }))
+        }
         setReactionCounts((prev) => ({
           ...prev,
-          [userReaction]: Math.max(0, (prev[userReaction] || 0) - 1),
+          [emoji]: (prev[emoji] || 0) + 1,
         }))
+        setUserReaction(emoji)
+
+        // Remove old reaction if exists
+        if (userReaction) {
+          const { error } = await supabase
+            .from('reactions')
+            .delete()
+            .eq('word_id', id)
+            .eq('user_id', currentUserId)
+
+          if (error) throw error
+        }
+
+        // Add new reaction
+        const { error } = await supabase.from('reactions').insert({
+          word_id: id,
+          user_id: currentUserId,
+          emoji,
+        })
+
+        if (error) throw error
       }
-
-      // Add new reaction
-      await supabase.from('reactions').insert({
-        word_id: id,
-        user_id: currentUserId,
-        emoji,
-      })
-
-      setReactionCounts((prev) => ({
-        ...prev,
-        [emoji]: (prev[emoji] || 0) + 1,
-      }))
-      setUserReaction(emoji)
+    } catch {
+      // Rollback on failure
+      setReactionCounts(prevCounts)
+      setUserReaction(prevReaction)
+    } finally {
+      setReacting(false)
     }
     setShowReactions(false)
   }
@@ -84,7 +106,7 @@ export default function WordPost({
     <div className="border-b border-zinc-800 px-4 py-5 hover:bg-zinc-950 transition-colors">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm font-bold shrink-0">
-          {(displayName || username)[0].toUpperCase()}
+          {(displayName || username || '?')[0].toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -98,9 +120,10 @@ export default function WordPost({
           <p className="text-3xl font-bold mt-2 mb-3">{word}</p>
           <div className="flex items-center gap-1 relative">
             <button
-              onClick={() => currentUserId && setShowReactions(!showReactions)}
+              onClick={() => currentUserId && !reacting && setShowReactions(!showReactions)}
+              disabled={reacting}
               className={`text-sm px-2 py-1 rounded-full transition-colors ${
-                currentUserId
+                currentUserId && !reacting
                   ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer'
                   : 'text-zinc-600 cursor-default'
               }`}

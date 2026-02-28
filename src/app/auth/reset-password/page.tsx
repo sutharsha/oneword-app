@@ -52,7 +52,12 @@ export default function ResetPasswordPage() {
     setLoading(false)
 
     setTimeout(() => {
-      router.push('/')
+      try {
+        router.push('/')
+      } catch {
+        // Navigation failed — user can manually go home
+        window.location.href = '/'
+      }
     }, 2000)
   }
 
