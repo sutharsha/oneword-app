@@ -3,6 +3,7 @@ import WordPost from '@/components/WordPost'
 import PostWord from '@/components/PostWord'
 import Header from '@/components/Header'
 import FeedSkeleton from '@/components/FeedSkeleton'
+import DailyRecap from '@/components/DailyRecap'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { startOfDay, subDays } from 'date-fns'
@@ -26,10 +27,11 @@ export const metadata: Metadata = {
   },
 }
 
-type FilterType = 'today' | 'week' | 'all' | 'following'
+type FilterType = 'today' | 'week' | 'all' | 'following' | 'popular'
 
 const FILTERS: { key: FilterType; label: string; authOnly?: boolean }[] = [
   { key: 'today', label: 'Today' },
+  { key: 'popular', label: 'Popular' },
   { key: 'week', label: 'This Week' },
   { key: 'following', label: 'Following', authOnly: true },
   { key: 'all', label: 'All Time' },
@@ -81,7 +83,7 @@ async function Feed({ filter }: { filter: FilterType }) {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  if (filter === 'today') {
+  if (filter === 'today' || filter === 'popular') {
     query = query.gte('created_at', startOfDay(new Date()).toISOString())
   } else if (filter === 'week') {
     query = query.gte('created_at', startOfDay(subDays(new Date(), 7)).toISOString())
@@ -132,6 +134,31 @@ async function Feed({ filter }: { filter: FilterType }) {
     }
   })
 
+  // Sort by total reactions for the "popular" tab
+  let sortedWords = words || []
+  if (filter === 'popular' && sortedWords.length > 0) {
+    sortedWords = [...sortedWords].sort((a, b) => {
+      const aTotal = Object.values(reactionMap[a.id] || {}).reduce((sum, n) => sum + n, 0)
+      const bTotal = Object.values(reactionMap[b.id] || {}).reduce((sum, n) => sum + n, 0)
+      return bTotal - aTotal
+    })
+  }
+
+  // Find today's "Word of the Day" — the word with the most reactions today
+  let crownWordId: string | null = null
+  if (filter === 'today' || filter === 'popular') {
+    let maxReactions = 0
+    sortedWords.forEach((w) => {
+      const total = Object.values(reactionMap[w.id] || {}).reduce((sum, n) => sum + n, 0)
+      if (total > maxReactions) {
+        maxReactions = total
+        crownWordId = w.id
+      }
+    })
+    // Only crown if at least 1 reaction
+    if (maxReactions === 0) crownWordId = null
+  }
+
   return (
     <>
       {/* Post box */}
@@ -155,8 +182,8 @@ async function Feed({ filter }: { filter: FilterType }) {
 
       {/* Feed */}
       <div>
-        {words && words.length > 0 ? (
-          words.map((w) => {
+        {sortedWords.length > 0 ? (
+          sortedWords.map((w) => {
             const profile = Array.isArray(w.profiles) ? w.profiles[0] : w.profiles
             return (
               <WordPost
@@ -173,6 +200,7 @@ async function Feed({ filter }: { filter: FilterType }) {
                 wordUserId={w.user_id}
                 promptId={w.prompt_id}
                 streakCount={profile?.current_streak || 0}
+                isCrowned={w.id === crownWordId}
               />
             )
           })
@@ -194,7 +222,7 @@ export default async function Home({
   searchParams: Promise<{ filter?: string }>
 }) {
   const params = await searchParams
-  const filter = (['today', 'week', 'all', 'following'].includes(params.filter || '') ? params.filter : 'today') as FilterType
+  const filter = (['today', 'week', 'all', 'following', 'popular'].includes(params.filter || '') ? params.filter : 'today') as FilterType
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -244,6 +272,12 @@ export default async function Home({
           )
         })}
       </div>
+
+      {filter === 'today' && (
+        <Suspense fallback={null}>
+          <DailyRecap />
+        </Suspense>
+      )}
 
       <Suspense fallback={<FeedSkeleton />}>
         <Feed filter={filter} />

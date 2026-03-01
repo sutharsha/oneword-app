@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import ShareButton from '@/components/ShareButton'
+import { useToast } from '@/components/Toast'
 
 interface WordPostProps {
   id: string
@@ -23,6 +24,7 @@ interface WordPostProps {
   wordUserId?: string
   promptId?: string | null
   streakCount?: number
+  isCrowned?: boolean
 }
 
 export default function WordPost({
@@ -38,6 +40,7 @@ export default function WordPost({
   wordUserId,
   promptId,
   streakCount,
+  isCrowned,
 }: WordPostProps) {
   const [reactionCounts, setReactionCounts] = useState(initialCounts)
   const [userReaction, setUserReaction] = useState(initialReaction)
@@ -49,6 +52,7 @@ export default function WordPost({
   const rateLimiter = useRef(createRateLimiter(10, 30_000))
   const deleteRateLimiter = useRef(createRateLimiter(3, 60_000))
   const router = useRouter()
+  const { toast } = useToast()
 
   const isOwner = currentUserId && wordUserId && currentUserId === wordUserId
 
@@ -151,10 +155,12 @@ export default function WordPost({
     if (error) {
       setDeleting(false)
       setShowDeleteConfirm(false)
+      toast('Failed to delete word', 'error')
       return
     }
 
     setDeleted(true)
+    toast('Word deleted')
     router.refresh()
   }
 
@@ -198,7 +204,10 @@ export default function WordPost({
               </span>
             ) : null}
           </div>
-          <p className="text-3xl font-bold mt-2 mb-3">{word}</p>
+          <p className="text-3xl font-bold mt-2 mb-3">
+            {isCrowned && <span className="mr-1" title="Word of the Day">👑</span>}
+            {word}
+          </p>
           <div className="flex items-center gap-1 relative">
             <button
               onClick={() => currentUserId && !reacting && setShowReactions(!showReactions)}
