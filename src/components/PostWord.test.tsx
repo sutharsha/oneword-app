@@ -11,12 +11,24 @@ vi.mock('next/navigation', () => ({
 // Mock supabase client
 const mockInsert = vi.fn()
 const mockDelete = vi.fn()
+const mockSelect = vi.fn()
+
+const chainable = () => {
+  const chain: Record<string, unknown> = {}
+  chain.eq = () => chain
+  chain.neq = () => chain
+  chain.ilike = () => chain
+  chain.limit = () => mockSelect()
+  return chain
+}
+
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     from: (table: string) => {
       if (table === 'words') {
         return {
           insert: mockInsert,
+          select: () => chainable(),
           delete: () => ({
             eq: () => ({
               eq: mockDelete,
@@ -40,6 +52,7 @@ describe('PostWord', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockInsert.mockResolvedValue({ error: null })
+    mockSelect.mockResolvedValue({ data: [] })
   })
 
   it('renders the prompt question', () => {
