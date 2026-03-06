@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { createRateLimiter } from '@/lib/rate-limit'
 import { validateWord } from '@/lib/validation'
+import { useToast } from '@/components/Toast'
+import Link from 'next/link'
+
+interface SameWordMatch {
+  username: string
+  display_name: string | null
+}
 
 interface PostWordProps {
   userId: string
@@ -19,7 +26,10 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
   const [posting, setPosting] = useState(false)
   const [answered, setAnswered] = useState(hasPostedToday)
   const [devBypass, setDevBypass] = useState(false)
+  const [sameWordMatches, setSameWordMatches] = useState<SameWordMatch[]>([])
+  const [postedWord, setPostedWord] = useState<string | null>(null)
   const router = useRouter()
+  const { toast } = useToast()
   const rateLimiter = useRef(createRateLimiter(3, 60_000))
 
   // Sync with server prop
@@ -68,14 +78,42 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
         setAnswered(true)
       } else {
         setError(insertError.message)
+        toast(insertError.message, 'error')
       }
       setPosting(false)
       return
     }
 
+    toast(`"${trimmed}" — said.`)
+
+    setPostedWord(trimmed)
     setWord('')
     setPosting(false)
     setAnswered(true)
+
+    // Find others who posted the same word for this prompt
+    if (promptId) {
+      const { data: matches } = await supabase
+        .from('words')
+        .select('user_id, profiles (username, display_name)')
+        .eq('prompt_id', promptId)
+        .ilike('word', trimmed)
+        .neq('user_id', userId)
+        .limit(10)
+
+      if (matches && matches.length > 0) {
+        setSameWordMatches(
+          matches.map((m) => {
+            const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles
+            return {
+              username: profile?.username || 'anonymous',
+              display_name: profile?.display_name || null,
+            }
+          })
+        )
+      }
+    }
+
     try {
       router.refresh()
     } catch {
@@ -121,6 +159,29 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
         <div className="text-center py-3">
           <p className="text-zinc-400 text-sm">You already answered today.</p>
           <p className="text-zinc-600 text-xs mt-1">Come back tomorrow for a new prompt.</p>
+
+          {/* Same Word connection */}
+          {sameWordMatches.length > 0 && postedWord && (
+            <div className="mt-3 p-3 bg-purple-500/5 border border-purple-500/20 rounded-xl animate-fade-in">
+              <p className="text-sm text-purple-400 font-medium">
+                You and {sameWordMatches.length} {sameWordMatches.length === 1 ? 'other' : 'others'} said &ldquo;{postedWord}&rdquo;
+              </p>
+              <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                {sameWordMatches.slice(0, 5).map((m) => (
+                  <Link
+                    key={m.username}
+                    href={`/profile/${m.username}`}
+                    className="text-xs text-zinc-400 hover:text-purple-400 transition-colors"
+                  >
+                    @{m.username}
+                  </Link>
+                ))}
+                {sameWordMatches.length > 5 && (
+                  <span className="text-xs text-zinc-500">+{sameWordMatches.length - 5} more</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
