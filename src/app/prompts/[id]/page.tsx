@@ -21,8 +21,24 @@ export async function generateMetadata({
     .eq('id', id)
     .maybeSingle()
 
+  const question = prompt?.question || 'Prompt'
+  const ogImage = `/api/og/${id}`
+
   return {
-    title: prompt?.question || 'Prompt',
+    title: question,
+    openGraph: {
+      title: question,
+      description: 'See what one word people chose.',
+      type: 'website',
+      siteName: 'OneWord',
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: question,
+      description: 'See what one word people chose.',
+      images: [ogImage],
+    },
   }
 }
 

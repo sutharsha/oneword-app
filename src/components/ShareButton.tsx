@@ -12,8 +12,11 @@ export default function ShareButton({ word, username, wordId }: ShareButtonProps
   const [copied, setCopied] = useState(false)
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/prompts/${wordId}`
-    const text = `"${word}" — @${username} on OneWord`
+    const challengeUrl = new URL(`/challenge/${wordId}`, window.location.origin)
+    challengeUrl.searchParams.set('from', username)
+
+    const url = challengeUrl.toString()
+    const text = `I said ${word} to today prompt on OneWord. What would YOU say? ${url}`
 
     // Try native share on mobile
     if (navigator.share) {
@@ -27,7 +30,7 @@ export default function ShareButton({ word, username, wordId }: ShareButtonProps
 
     // Fallback: copy link
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {

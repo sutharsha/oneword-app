@@ -11,20 +11,32 @@ import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'OneWord — Say one word.',
-  description: 'A social feed where you can only say one word. Answer the daily prompt with a single word and react to others.',
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient()
+  const { data: prompts } = await supabase.rpc('get_todays_prompt')
+  const todaysPrompt = prompts?.[0] || null
+
+  const ogImage = todaysPrompt
+    ? `/api/og/${todaysPrompt.id}`
+    : undefined
+
+  return {
     title: 'OneWord — Say one word.',
-    description: 'A social feed where you can only say one word.',
-    type: 'website',
-    siteName: 'OneWord',
-  },
-  twitter: {
-    card: 'summary',
-    title: 'OneWord — Say one word.',
-    description: 'A social feed where you can only say one word.',
-  },
+    description: 'A social feed where you can only say one word. Answer the daily prompt with a single word and react to others.',
+    openGraph: {
+      title: 'OneWord — Say one word.',
+      description: 'A social feed where you can only say one word.',
+      type: 'website',
+      siteName: 'OneWord',
+      images: ogImage ? [{ url: ogImage, width: 1200, height: 630 }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'OneWord — Say one word.',
+      description: 'A social feed where you can only say one word.',
+      images: ogImage ? [ogImage] : undefined,
+    },
+  }
 }
 
 type FilterType = 'today' | 'week' | 'all' | 'following' | 'popular'
