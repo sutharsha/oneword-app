@@ -1,6 +1,11 @@
 -- ============================================
 -- OneWord App - Supabase Schema
 -- Run this in the Supabase SQL Editor
+-- Last synced: 2026-03-22
+-- ============================================
+
+-- ============================================
+-- Phase 1: Core Tables
 -- ============================================
 
 -- Profiles (extends Supabase auth.users)
@@ -9,7 +14,11 @@ create table public.profiles (
   username text unique not null,
   display_name text,
   avatar_url text,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now() not null,
+  current_streak integer default 0 not null,
+  longest_streak integer default 0 not null,
+  last_post_date date,
+  is_admin boolean default false not null
 );
 
 alter table public.profiles enable row level security;
@@ -56,6 +65,10 @@ create policy "Authenticated users can post words"
 create policy "Users can delete own words"
   on public.words for delete using (auth.uid() = user_id);
 
+-- One word per user per prompt
+alter table public.words
+  add constraint words_user_id_prompt_id_unique unique (user_id, prompt_id);
+
 -- Reactions
 create table public.reactions (
   id uuid default gen_random_uuid() primary key,
@@ -77,28 +90,73 @@ create policy "Authenticated users can react"
 create policy "Users can remove own reactions"
   on public.reactions for delete using (auth.uid() = user_id);
 
--- One word per user per prompt
-alter table public.words
-  add constraint words_user_id_prompt_id_unique unique (user_id, prompt_id);
+-- ============================================
+-- Phase 2: Social & Engagement
+-- ============================================
 
+-- Follows
+create table public.follows (
+  id uuid default gen_random_uuid() primary key,
+  follower_id uuid references public.profiles(id) on delete cascade not null,
+  following_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now() not null,
+  unique(follower_id, following_id),
+  check (follower_id != following_id)
+);
+
+alter table public.follows enable row level security;
+
+create policy "Follows are viewable by everyone"
+  on public.follows for select using (true);
+
+create policy "Authenticated users can follow"
+  on public.follows for insert with check (auth.uid() = follower_id);
+
+create policy "Users can unfollow"
+  on public.follows for delete using (auth.uid() = follower_id);
+
+-- Notifications
+create table public.notifications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  actor_id uuid references public.profiles(id) on delete cascade not null,
+  type text not null check (type in ('reaction', 'follow')),
+  word_id uuid references public.words(id) on delete cascade,
+  emoji text,
+  read boolean default false not null,
+  created_at timestamptz default now() not null
+);
+
+alter table public.notifications enable row level security;
+
+create policy "Users can view own notifications"
+  on public.notifications for select using (auth.uid() = user_id);
+
+create policy "Authenticated users can create notifications"
+  on public.notifications for insert with check (auth.uid() = actor_id);
+
+create policy "Users can update own notifications"
+  on public.notifications for update using (auth.uid() = user_id);
+
+create policy "Users can delete own notifications"
+  on public.notifications for delete using (auth.uid() = user_id);
+
+-- ============================================
 -- Indexes
+-- ============================================
+
 create index words_created_at_idx on public.words (created_at desc);
 create index words_user_id_idx on public.words (user_id);
 create index words_prompt_id_idx on public.words (prompt_id);
 create index reactions_word_id_idx on public.reactions (word_id);
+create index follows_follower_id_idx on public.follows (follower_id);
+create index follows_following_id_idx on public.follows (following_id);
+create index notifications_user_id_idx on public.notifications (user_id, read, created_at desc);
+create index notifications_actor_id_idx on public.notifications (actor_id);
 
--- Seed some prompts
-insert into public.prompts (question, active_date) values
-  ('How are you feeling today?', current_date),
-  ('What''s the best city?', current_date + 1),
-  ('What scares you?', current_date + 2),
-  ('What do you want most?', current_date + 3),
-  ('Describe your job.', current_date + 4),
-  ('What''s overrated?', current_date + 5),
-  ('What''s underrated?', current_date + 6),
-  ('Your comfort food?', current_date + 7),
-  ('What''s broken?', current_date + 8),
-  ('One word for humanity.', current_date + 9);
+-- ============================================
+-- Functions & Triggers
+-- ============================================
 
 -- Function to get today's prompt
 create or replace function get_todays_prompt()
@@ -127,69 +185,6 @@ $$ language plpgsql security definer;
 create or replace trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-
--- ============================================
--- Phase 3: Social & Engagement
--- ============================================
-
--- Follows
-create table public.follows (
-  id uuid default gen_random_uuid() primary key,
-  follower_id uuid references public.profiles(id) on delete cascade not null,
-  following_id uuid references public.profiles(id) on delete cascade not null,
-  created_at timestamptz default now() not null,
-  unique(follower_id, following_id),
-  check (follower_id != following_id)
-);
-
-alter table public.follows enable row level security;
-
-create policy "Follows are viewable by everyone"
-  on public.follows for select using (true);
-
-create policy "Authenticated users can follow"
-  on public.follows for insert with check (auth.uid() = follower_id);
-
-create policy "Users can unfollow"
-  on public.follows for delete using (auth.uid() = follower_id);
-
-create index follows_follower_id_idx on public.follows (follower_id);
-create index follows_following_id_idx on public.follows (following_id);
-
--- Notifications
-create table public.notifications (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.profiles(id) on delete cascade not null,
-  actor_id uuid references public.profiles(id) on delete cascade not null,
-  type text not null check (type in ('reaction', 'follow')),
-  word_id uuid references public.words(id) on delete cascade,
-  emoji text,
-  read boolean default false not null,
-  created_at timestamptz default now() not null
-);
-
-alter table public.notifications enable row level security;
-
-create policy "Users can view own notifications"
-  on public.notifications for select using (auth.uid() = user_id);
-
-create policy "Authenticated users can create notifications"
-  on public.notifications for insert with check (auth.uid() = actor_id);
-
-create policy "Users can update own notifications"
-  on public.notifications for update using (auth.uid() = user_id);
-
-create policy "Users can delete own notifications"
-  on public.notifications for delete using (auth.uid() = user_id);
-
-create index notifications_user_id_idx on public.notifications (user_id, read, created_at desc);
-create index notifications_actor_id_idx on public.notifications (actor_id);
-
--- Streaks (added to profiles)
-alter table public.profiles
-  add column current_streak integer default 0 not null,
-  add column longest_streak integer default 0 not null,
-  add column last_post_date date;
 
 -- Function to update streak when a word is posted
 create or replace function public.update_streak()
@@ -230,3 +225,19 @@ $$ language plpgsql security definer;
 create trigger on_word_posted
   after insert on public.words
   for each row execute function public.update_streak();
+
+-- ============================================
+-- Seed Data (starter prompts)
+-- ============================================
+
+insert into public.prompts (question, active_date) values
+  ('How are you feeling today?', current_date),
+  ('What''s the best city?', current_date + 1),
+  ('What scares you?', current_date + 2),
+  ('What do you want most?', current_date + 3),
+  ('Describe your job.', current_date + 4),
+  ('What''s overrated?', current_date + 5),
+  ('What''s underrated?', current_date + 6),
+  ('Your comfort food?', current_date + 7),
+  ('What''s broken?', current_date + 8),
+  ('One word for humanity.', current_date + 9);
