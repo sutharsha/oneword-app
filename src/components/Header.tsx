@@ -21,6 +21,13 @@ export default function Header({ user, unreadNotifications = 0, isAdmin = false 
         >
           Archive
         </Link>
+        <Link
+          href="/leaderboard"
+          className="text-sm text-zinc-400 hover:text-white transition-colors"
+          aria-label="Daily leaderboard"
+        >
+          🏆
+        </Link>
         {isAdmin && (
           <Link
             href="/admin"

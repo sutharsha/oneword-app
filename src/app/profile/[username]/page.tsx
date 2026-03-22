@@ -3,6 +3,7 @@ import Header from '@/components/Header'
 import WordPost from '@/components/WordPost'
 import ProfileEdit from '@/components/ProfileEdit'
 import FollowButton from '@/components/FollowButton'
+import StreakShareButton from '@/components/StreakShareButton'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import Image from 'next/image'
@@ -170,6 +171,11 @@ export default async function ProfilePage({
                 Best: {profile.longest_streak}d
               </span>
             )}
+            <StreakShareButton
+              username={profile.username}
+              streak={profile.current_streak}
+              longestStreak={profile.longest_streak}
+            />
           </div>
         )}
 

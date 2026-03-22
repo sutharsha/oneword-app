@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import WordPost from '@/components/WordPost'
 import PostWord from '@/components/PostWord'
+import AnonPostWord from '@/components/AnonPostWord'
 import Header from '@/components/Header'
 import FeedSkeleton from '@/components/FeedSkeleton'
 import DailyRecap from '@/components/DailyRecap'
@@ -8,6 +9,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { startOfDay, subDays } from 'date-fns'
 import type { Metadata } from 'next'
+import PromptTimer from '@/components/PromptTimer'
 
 export const dynamic = 'force-dynamic'
 
@@ -183,12 +185,18 @@ async function Feed({ filter }: { filter: FilterType }) {
         />
       )}
 
-      {/* Prompt banner for logged-out users */}
+      {/* Anonymous post form for logged-out users */}
       {!user && todaysPrompt && (
-        <div className="border-b border-zinc-800 p-4 text-center">
-          <span className="text-xs text-zinc-500 uppercase tracking-widest">Today&apos;s prompt</span>
-          <p className="text-lg font-semibold text-purple-400 mt-1">{todaysPrompt.question}</p>
-          <p className="text-sm text-zinc-500 mt-2">Sign in to answer</p>
+        <AnonPostWord
+          promptId={todaysPrompt.id}
+          promptQuestion={todaysPrompt.question}
+        />
+      )}
+
+      {/* FOMO timer — only on Today tab where it's relevant */}
+      {filter === 'today' && todaysPrompt && (
+        <div className="px-4 pb-2 flex justify-end">
+          <PromptTimer />
         </div>
       )}
 
