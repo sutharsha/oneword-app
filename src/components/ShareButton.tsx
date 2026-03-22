@@ -21,7 +21,7 @@ export default function ShareButton({ word, username, wordId }: ShareButtonProps
     // Try native share on mobile
     if (navigator.share) {
       try {
-        await navigator.share({ text, url })
+        await navigator.share({ text })
         return
       } catch {
         // User cancelled or share failed, fall through to clipboard
