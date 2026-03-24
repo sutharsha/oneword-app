@@ -9,7 +9,7 @@ _Last updated: 2026-03-22_
 - **Social:** Profiles, follow/unfollow, notifications, follower counts
 - **Engagement:** Streaks, daily recap, "Word of the Day" crown, same-word connections, popular/weekly/all-time tabs
 - **Admin:** Prompt manager + analytics panel
-- **Infra:** Docker on Linode ($5 Nanode), Caddy reverse proxy (`oneword.sutharsha.com`), GitHub CI, Supabase (free tier)
+- **Infra:** Docker on Linode ($5 Nanode), Caddy reverse proxy (`sayoneword.com`), GitHub CI, Supabase (free tier)
 - **Stack:** Next.js 15 (App Router), Supabase (Auth + Postgres + RLS), Tailwind CSS, TypeScript
 
 ---
@@ -25,7 +25,7 @@ _Last updated: 2026-03-22_
 | 3 | **Dynamic OG share images** | 🔧 In progress | HIGH | Share links need visual cards showing the word + prompt. Huge for Twitter/WhatsApp previews. |
 | 4 | **Anonymous posting → account capture** | 🔧 In progress | HIGH | Let people play without signing up. Capture account after they're hooked. |
 | 5 | **Better share flow + friend comparison** | 🔧 In progress | HIGH | "I said X, what would YOU say?" → personalized invite URL. Platform-specific share text. |
-| 6 | **Brandable domain** | ❌ Not started | HIGH | `oneword.sutharsha.com` isn't viral-friendly. Need `oneword.app`, `sayoneword.com`, etc. |
+| 6 | **Brandable domain** | ✅ Done | HIGH | Registered `sayoneword.com` — DNS via Linode, Caddy auto-HTTPS. |
 
 ### Phase 2 — High Impact (Virality Mechanics)
 
@@ -62,7 +62,7 @@ _Last updated: 2026-03-22_
 
 - **Hosting:** Linode Nanode 1GB ($5/mo) — 1 vCPU, 961MB RAM, 25GB disk
 - **Database:** Supabase free tier — 500MB DB, 50K MAU, shared compute
-- **Domain:** Currently `oneword.sutharsha.com` via Caddy on Linode
+- **Domain:** `sayoneword.com` (primary), `oneword.sutharsha.com` (legacy, still works)
 - **CI:** GitHub Actions — lint, type-check, test, build on push/PR
 - **Docker:** Multi-stage build (builder → runner), standalone Next.js output
 - **Containers on Linode:** oneword-app (~60MB RAM), health-api (~18MB RAM)

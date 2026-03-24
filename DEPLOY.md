@@ -105,6 +105,6 @@ Browser → Caddy (HTTPS) → Docker (Next.js :3000) → Supabase (Postgres + Au
 
 ## Current Production
 
-- **URL:** https://oneword.sutharsha.com
+- **URL:** https://sayoneword.com (primary), https://oneword.sutharsha.com (legacy)
 - **Server:** Linode Nanode, Mumbai (ap-west)
 - **Caddy config:** Also serves health.sutharsha.com on same box

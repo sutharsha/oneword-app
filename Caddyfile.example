@@ -2,6 +2,10 @@
 # Place at /etc/caddy/Caddyfile on your server
 # Caddy auto-provisions HTTPS via Let's Encrypt
 
-yourdomain.com {
+sayoneword.com {
     reverse_proxy localhost:3000
+}
+
+www.sayoneword.com {
+    redir https://sayoneword.com{uri} permanent
 }
