@@ -133,7 +133,7 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
       )}
 
       {showForm ? (
-        <form onSubmit={handleSubmit} className="flex gap-3 items-center">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
             type="text"
             value={word}
@@ -143,14 +143,14 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
             }}
             placeholder="One word..."
             maxLength={45}
-            className="flex-1 bg-zinc-900 border border-zinc-700 rounded-full px-5 py-3 text-lg font-bold focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 placeholder:text-zinc-600"
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-full px-5 py-3 text-lg font-bold focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 placeholder:text-zinc-600"
             autoComplete="off"
             spellCheck={false}
           />
           <button
             type="submit"
             disabled={posting || !word.trim()}
-            className="bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold px-6 py-3 rounded-full transition-colors"
+            className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold px-6 py-3 rounded-full transition-colors"
           >
             {posting ? '...' : 'Say'}
           </button>
