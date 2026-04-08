@@ -25,7 +25,6 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
   const [error, setError] = useState<string | null>(null)
   const [posting, setPosting] = useState(false)
   const [answered, setAnswered] = useState(hasPostedToday)
-  const [devBypass, setDevBypass] = useState(false)
   const [sameWordMatches, setSameWordMatches] = useState<SameWordMatch[]>([])
   const [postedWord, setPostedWord] = useState<string | null>(null)
   const router = useRouter()
@@ -56,15 +55,6 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
     setError(null)
 
     const supabase = createClient()
-
-    // Dev bypass: delete existing word for this prompt so re-post succeeds
-    if (devBypass && promptId) {
-      await supabase
-        .from('words')
-        .delete()
-        .eq('user_id', userId)
-        .eq('prompt_id', promptId)
-    }
 
     const { error: insertError } = await supabase.from('words').insert({
       user_id: userId,
@@ -121,7 +111,7 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
     }
   }
 
-  const showForm = !answered || devBypass
+  const showForm = !answered
 
   return (
     <div className="border-b border-zinc-800 p-4">
@@ -187,20 +177,6 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
 
       {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
 
-      {/* Dev toggle — allows re-posting during development */}
-      {answered && (
-        <div className="mt-2 flex justify-center">
-          <button
-            onClick={() => {
-              setDevBypass(!devBypass)
-              setError(null)
-            }}
-            className="text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors"
-          >
-            {devBypass ? '[dev: bypass on]' : '[dev: allow repost]'}
-          </button>
-        </div>
-      )}
     </div>
   )
 }
