@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { startOfDay, subDays } from 'date-fns'
 import type { Metadata } from 'next'
 import PromptTimer from '@/components/PromptTimer'
+import Footer from '@/components/Footer'
 
 export const dynamic = 'force-dynamic'
 
@@ -302,6 +303,8 @@ export default async function Home({
       <Suspense fallback={<FeedSkeleton />}>
         <Feed filter={filter} />
       </Suspense>
+
+      <Footer />
     </main>
   )
 }
