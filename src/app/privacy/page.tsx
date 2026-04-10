@@ -88,14 +88,38 @@ export default function PrivacyPolicy() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">8. Changes to This Policy</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">8. Data Retention</h2>
+          <ul className="list-disc list-inside space-y-2 text-zinc-400">
+            <li><strong className="text-zinc-300">Account data:</strong> Retained as long as your account exists. Deleted permanently when you delete your account.</li>
+            <li><strong className="text-zinc-300">Anonymous posts:</strong> Retained indefinitely as they are not linked to any identity.</li>
+            <li><strong className="text-zinc-300">Location data:</strong> Stored as approximate coordinates only. No IP addresses are retained after geolocation lookup.</li>
+            <li><strong className="text-zinc-300">Server logs:</strong> Temporary request logs may contain IP addresses and are automatically purged within 30 days.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">9. Children&apos;s Privacy</h2>
+          <p className="text-zinc-400">
+            OneWord is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal data, please contact us and we will delete it promptly.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">10. International Users</h2>
+          <p className="text-zinc-400">
+            OneWord is operated from India. If you access the Service from outside India, your data may be transferred to and processed in India. By using the Service, you consent to this transfer. We handle all data in accordance with this privacy policy regardless of where you are located.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">11. Changes to This Policy</h2>
           <p className="text-zinc-400">
             We may update this policy from time to time. Significant changes will be communicated via the app. The &quot;last updated&quot; date at the top reflects the most recent revision.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">9. Contact</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">12. Contact</h2>
           <p className="text-zinc-400">
             Questions about this policy? Reach out at{' '}
             <a href="mailto:hello@sayoneword.com" className="text-purple-400 hover:text-purple-300">

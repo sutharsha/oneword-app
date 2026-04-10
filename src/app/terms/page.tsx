@@ -88,14 +88,70 @@ export default function TermsOfService() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">9. Changes</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">9. Disclaimers</h2>
+          <div className="space-y-4 text-zinc-400">
+            <div>
+              <h3 className="text-zinc-200 font-medium mb-1">No Warranty</h3>
+              <p>
+                THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, OR STATUTORY, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-zinc-200 font-medium mb-1">User-Generated Content</h3>
+              <p>
+                Words, reactions, and any other content posted by users represent the views of the individual poster only — not OneWord, its creators, or its operators. We do not endorse, verify, or take responsibility for any user-generated content.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-zinc-200 font-medium mb-1">Location Accuracy</h3>
+              <p>
+                The word map feature displays approximate locations derived from IP addresses. These locations may be inaccurate, especially for users on VPNs, mobile networks, or proxy services. The map is for entertainment and visualization purposes only — do not rely on it for any factual determination of a user&apos;s real-world location.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-zinc-200 font-medium mb-1">Data Loss</h3>
+              <p>
+                While we take reasonable measures to protect your data, we cannot guarantee against data loss, corruption, or unauthorized access. You use the Service at your own risk. We strongly recommend not relying on OneWord as your sole record of anything important (though if your most important record is a single word, we have questions).
+              </p>
+            </div>
+            <div>
+              <h3 className="text-zinc-200 font-medium mb-1">External Links & Integrations</h3>
+              <p>
+                The Service may contain links to third-party websites or integrate with third-party services. We are not responsible for the content, privacy practices, or availability of any third-party resources.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-zinc-200 font-medium mb-1">Indemnification</h3>
+              <p>
+                You agree to indemnify and hold harmless OneWord, its creators, operators, and affiliates from any claims, damages, losses, or expenses (including legal fees) arising from your use of the Service, your content, or your violation of these terms.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">10. Governing Law</h2>
+          <p className="text-zinc-400">
+            These terms are governed by and construed in accordance with the laws of India. Any disputes arising from these terms or the Service shall be subject to the exclusive jurisdiction of the courts in Bangalore, Karnataka.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">11. Severability</h2>
+          <p className="text-zinc-400">
+            If any provision of these terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary, and the remaining provisions shall remain in full force and effect.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">12. Changes</h2>
           <p className="text-zinc-400">
             We may update these terms as the platform evolves. Continued use after changes constitutes acceptance.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">10. Contact</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">13. Contact</h2>
           <p className="text-zinc-400">
             Questions? Reach out at{' '}
             <a href="mailto:hello@sayoneword.com" className="text-purple-400 hover:text-purple-300">
