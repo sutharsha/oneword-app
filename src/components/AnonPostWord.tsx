@@ -5,6 +5,7 @@ import { validateWord } from '@/lib/validation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
+import Link from 'next/link'
 
 interface AnonPostWordProps {
   promptId: string | null
@@ -281,6 +282,13 @@ export default function AnonPostWord({ promptId, promptQuestion }: AnonPostWordP
             >
               {authView === 'signUp' ? 'Sign in' : 'Sign up'}
             </button>
+          </p>
+
+          <p className="text-xs text-zinc-500 text-center">
+            By signing up, you confirm you are at least 13 years old and agree to our{' '}
+            <Link href="/terms" className="text-purple-400 hover:underline" target="_blank">Terms</Link>
+            {' '}and{' '}
+            <Link href="/privacy" className="text-purple-400 hover:underline" target="_blank">Privacy Policy</Link>.
           </p>
 
           <button

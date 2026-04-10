@@ -8,6 +8,7 @@ const getSnapshot = () => true
 const getServerSnapshot = () => false
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 type AuthView = 'signIn' | 'signUp' | 'forgotPassword'
 
@@ -236,6 +237,14 @@ export default function AuthButton({ user }: AuthButtonProps) {
                 >
                   {loading ? (view === 'signUp' ? 'Creating...' : 'Signing in...') : view === 'signUp' ? 'Create account' : 'Sign in'}
                 </button>
+                {view === 'signUp' && (
+                  <p className="text-xs text-zinc-500 text-center mt-2">
+                    By signing up, you confirm you are at least 13 years old and agree to our{' '}
+                    <Link href="/terms" className="text-purple-400 hover:underline" target="_blank">Terms</Link>
+                    {' '}and{' '}
+                    <Link href="/privacy" className="text-purple-400 hover:underline" target="_blank">Privacy Policy</Link>.
+                  </p>
+                )}
               </form>
             )}
 
