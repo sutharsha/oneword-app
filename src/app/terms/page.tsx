@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 }
 
 export default function TermsOfService() {
-  const lastUpdated = 'April 11, 2026'
+  const lastUpdated = 'April 12, 2026'
 
   return (
     <main className="max-w-2xl mx-auto px-6 py-12 text-zinc-300">
@@ -65,7 +65,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-xl font-semibold text-white mb-3">6. Location Data</h2>
           <p className="text-zinc-400">
-            When you post a word, we derive your approximate city-level location from your IP address for use in our word map feature. We do not store your IP address — only the approximate coordinates. See our{' '}
+            When you post a word, we collect your IP address temporarily (up to 30 days) for abuse prevention and to derive your approximate city-level location for use in our word map feature. IP addresses are automatically purged after 30 days. See our{' '}
             <Link href="/privacy" className="text-purple-400 hover:text-purple-300">
               Privacy Policy
             </Link>{' '}

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 }
 
 export default function PrivacyPolicy() {
-  const lastUpdated = 'April 11, 2026'
+  const lastUpdated = 'April 12, 2026'
 
   return (
     <main className="max-w-2xl mx-auto px-6 py-12 text-zinc-300">
@@ -25,7 +25,8 @@ export default function PrivacyPolicy() {
           <ul className="list-disc list-inside space-y-2 text-zinc-400">
             <li><strong className="text-zinc-300">Account information:</strong> Email address and display name when you create an account.</li>
             <li><strong className="text-zinc-300">Content:</strong> The words you post in response to daily prompts.</li>
-            <li><strong className="text-zinc-300">Approximate location:</strong> We derive your approximate city-level location from your IP address when you post a word. We store only the city name and approximate coordinates (latitude/longitude rounded to ~10 km precision) — <strong className="text-zinc-200">never your raw IP address</strong>.</li>
+            <li><strong className="text-zinc-300">IP address:</strong> Your IP address is temporarily stored when you post a word or interact with the Service. It is used to derive your approximate city-level location and for abuse prevention (spam detection, ban enforcement). IP addresses are <strong className="text-zinc-200">automatically deleted after 30 days</strong>.</li>
+            <li><strong className="text-zinc-300">Approximate location:</strong> We derive your approximate city-level location from your IP address when you post a word. We store only the city name and approximate coordinates (latitude/longitude rounded to ~10 km precision).</li>
             <li><strong className="text-zinc-300">Usage data:</strong> Basic analytics such as page views and interaction patterns.</li>
           </ul>
         </section>
@@ -35,6 +36,7 @@ export default function PrivacyPolicy() {
           <ul className="list-disc list-inside space-y-2 text-zinc-400">
             <li><strong className="text-zinc-300">Account info:</strong> To let you sign in, maintain streaks, and personalize your experience.</li>
             <li><strong className="text-zinc-300">Content:</strong> To display your words in the feed and archive.</li>
+            <li><strong className="text-zinc-300">IP address:</strong> To prevent abuse, detect spam, enforce bans, and derive approximate location. Automatically purged after 30 days.</li>
             <li><strong className="text-zinc-300">Location:</strong> To display an anonymous, aggregate word map showing where words are coming from around the world. Individual posts are <em>not</em> linked to precise locations publicly.</li>
             <li><strong className="text-zinc-300">Usage data:</strong> To improve the app and understand how people use it.</li>
           </ul>
@@ -44,7 +46,7 @@ export default function PrivacyPolicy() {
           <h2 className="text-xl font-semibold text-white mb-3">3. What We Don&apos;t Do</h2>
           <ul className="list-disc list-inside space-y-2 text-zinc-400">
             <li>We do <strong className="text-zinc-200">not</strong> sell your data to anyone.</li>
-            <li>We do <strong className="text-zinc-200">not</strong> store your IP address after deriving location.</li>
+            <li>We do <strong className="text-zinc-200">not</strong> retain your IP address beyond 30 days.</li>
             <li>We do <strong className="text-zinc-200">not</strong> share your data with third-party advertisers.</li>
             <li>We do <strong className="text-zinc-200">not</strong> track you across other websites.</li>
           </ul>
@@ -92,7 +94,8 @@ export default function PrivacyPolicy() {
           <ul className="list-disc list-inside space-y-2 text-zinc-400">
             <li><strong className="text-zinc-300">Account data:</strong> Retained as long as your account exists. Deleted permanently when you delete your account.</li>
             <li><strong className="text-zinc-300">Anonymous posts:</strong> Retained indefinitely as they are not linked to any identity.</li>
-            <li><strong className="text-zinc-300">Location data:</strong> Stored as approximate coordinates only. No IP addresses are retained after geolocation lookup.</li>
+            <li><strong className="text-zinc-300">IP addresses:</strong> Retained for up to 30 days for abuse prevention, then permanently deleted via automated purge.</li>
+            <li><strong className="text-zinc-300">Location data:</strong> Stored as approximate coordinates only. Retained as long as the associated post exists.</li>
             <li><strong className="text-zinc-300">Server logs:</strong> Temporary request logs may contain IP addresses and are automatically purged within 30 days.</li>
           </ul>
         </section>
