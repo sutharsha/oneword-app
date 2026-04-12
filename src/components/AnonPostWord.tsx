@@ -117,20 +117,23 @@ export default function AnonPostWord({ promptId, promptQuestion }: AnonPostWordP
     submittedRef.current = false
   }
 
-  const postPendingWord = async (supabase: ReturnType<typeof createClient>, userId: string) => {
+  const postPendingWord = async (_supabase: ReturnType<typeof createClient>, _userId: string) => {
     if (!pendingWord || !promptId) return
 
-    const { error: insertError } = await supabase.from('words').insert({
-      user_id: userId,
-      word: pendingWord,
-      prompt_id: promptId,
+    // Post via server API to capture IP + geolocation
+    const res = await fetch('/api/words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: pendingWord, prompt_id: promptId }),
     })
 
-    if (insertError) {
-      if (insertError.code === '23505') {
+    const result = await res.json()
+
+    if (!res.ok) {
+      if (res.status === 409) {
         toast('You already answered this prompt!')
       } else {
-        toast(insertError.message, 'error')
+        toast(result.error || 'Something went wrong', 'error')
       }
     } else {
       toast(`"${pendingWord}" — said.`)

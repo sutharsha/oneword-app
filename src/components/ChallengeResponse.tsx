@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { validateWord } from '@/lib/validation'
 import { useToast } from '@/components/Toast'
 import AuthButton from '@/components/AuthButton'
@@ -52,19 +51,21 @@ export default function ChallengeResponse({
     setSubmitting(true)
     setError(null)
 
-    const supabase = createClient()
-    const { error: insertError } = await supabase.from('words').insert({
-      user_id: user.id,
-      prompt_id: promptId,
-      word: trimmed,
+    // Post via server API to capture IP + geolocation
+    const res = await fetch('/api/words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: trimmed, prompt_id: promptId }),
     })
 
-    if (insertError) {
-      if (insertError.code === '23505') {
+    const result = await res.json()
+
+    if (!res.ok) {
+      if (res.status === 409) {
         setError('You already answered this prompt.')
       } else {
-        setError(insertError.message)
-        toast(insertError.message, 'error')
+        setError(result.error || 'Something went wrong')
+        toast(result.error || 'Something went wrong', 'error')
       }
       setSubmitting(false)
       return

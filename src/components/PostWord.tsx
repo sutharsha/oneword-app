@@ -54,21 +54,22 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
     setPosting(true)
     setError(null)
 
-    const supabase = createClient()
-
-    const { error: insertError } = await supabase.from('words').insert({
-      user_id: userId,
-      word: trimmed,
-      prompt_id: promptId,
+    // Post via server API to capture IP + geolocation
+    const res = await fetch('/api/words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: trimmed, prompt_id: promptId }),
     })
 
-    if (insertError) {
-      if (insertError.code === '23505') {
+    const result = await res.json()
+
+    if (!res.ok) {
+      if (res.status === 409) {
         setError('You already answered today.')
         setAnswered(true)
       } else {
-        setError(insertError.message)
-        toast(insertError.message, 'error')
+        setError(result.error || 'Something went wrong')
+        toast(result.error || 'Something went wrong', 'error')
       }
       setPosting(false)
       return
@@ -83,6 +84,7 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
 
     // Find others who posted the same word for this prompt
     if (promptId) {
+      const supabase = createClient()
       const { data: matches } = await supabase
         .from('words')
         .select('user_id, profiles (username, display_name)')
