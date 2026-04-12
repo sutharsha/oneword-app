@@ -28,6 +28,13 @@ export default function Header({ user, unreadNotifications = 0, isAdmin = false 
         >
           🏆
         </Link>
+        <Link
+          href="/map"
+          className="text-sm text-zinc-400 hover:text-white transition-colors"
+          aria-label="Word map"
+        >
+          🗺️
+        </Link>
         {isAdmin && (
           <Link
             href="/admin"
