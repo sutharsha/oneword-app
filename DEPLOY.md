@@ -15,6 +15,26 @@
    - Anon/public key
    - Service role key (secret)
 
+### Database Migrations
+
+After running the base schema, also run the geolocation migration:
+
+```bash
+# Via psql (needs IPv6 — use from the Linode server)
+PGPASSWORD='<db-password>' psql -h db.<project-ref>.supabase.co -p 5432 -U postgres -d postgres \
+  -f supabase/migrations/20260412_add_location_to_words.sql
+```
+
+Enable pg_cron and schedule the IP purge job:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- See notes/infrastructure.md for the full purge function + cron setup
+```
+
+See **[notes/infrastructure.md](notes/infrastructure.md)** for the complete database setup, cron jobs, extensions, and migration checklist.
+
 ## 2. Environment Variables
 
 ```bash
@@ -102,6 +122,8 @@ Browser → Caddy (HTTPS) → Docker (Next.js :3000) → Supabase (Postgres + Au
 - **Database:** Supabase free tier — 500MB, 50K MAU
 - **Docker image:** ~160MB, idles at ~60MB RAM
 - **Next.js:** Standalone output mode (no node_modules in prod)
+- **GeoIP:** MaxMind GeoLite2-City via `geolite2-redist` (bundled in image)
+- **IP purge:** pg_cron job runs daily at 3:00 AM UTC, nulls IPs older than 30 days
 
 ## Current Production
 
