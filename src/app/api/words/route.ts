@@ -30,11 +30,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Extract and resolve IP
+    // Extract and resolve IP (non-blocking — word posts even if geo fails)
     const ip = extractIP(request.headers)
     let geo = null
-    if (ip) {
-      geo = await resolveIP(ip)
+    try {
+      if (ip) {
+        geo = await resolveIP(ip)
+      }
+    } catch (geoError) {
+      console.error('GeoIP lookup failed (non-fatal):', geoError)
+      // Continue without geo data — the word still gets posted
     }
 
     // Insert the word with location data

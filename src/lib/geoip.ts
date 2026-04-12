@@ -1,18 +1,37 @@
 import maxmind, { CityResponse, Reader } from 'maxmind'
 import { open as geolite2Open, GeoIpDbName } from 'geolite2-redist'
+import { mkdirSync } from 'fs'
 
 let reader: Reader<CityResponse> | null = null
 let readerPromise: Promise<Reader<CityResponse>> | null = null
+
+// Use /tmp for the GeoIP database download dir (writable in Docker)
+const GEOIP_DB_DIR = '/tmp/geolite2-dbs'
 
 async function getReader(): Promise<Reader<CityResponse>> {
   if (reader) return reader
   if (readerPromise) return readerPromise
 
-  readerPromise = geolite2Open<Reader<CityResponse>>(GeoIpDbName.City, (path: string) =>
-    maxmind.open<CityResponse>(path)
+  // Ensure the download directory exists
+  try {
+    mkdirSync(GEOIP_DB_DIR, { recursive: true })
+  } catch {
+    // ignore if already exists
+  }
+
+  readerPromise = geolite2Open<Reader<CityResponse>>(
+    GeoIpDbName.City,
+    (path: string) => maxmind.open<CityResponse>(path),
+    GEOIP_DB_DIR
   ).then(wrapped => {
-    // geolite2-redist returns a WrappedReader; the underlying reader is the maxmind instance
-    // The WrappedReader proxies method calls to the underlying reader
+    return wrapped as unknown as Reader<CityResponse>
+  }).catch(async (err) => {
+    console.error('geolite2-redist open failed, trying fallback:', err.message)
+    // Fallback: try without custom path
+    const wrapped = await geolite2Open<Reader<CityResponse>>(
+      GeoIpDbName.City,
+      (path: string) => maxmind.open<CityResponse>(path)
+    )
     return wrapped as unknown as Reader<CityResponse>
   })
 
