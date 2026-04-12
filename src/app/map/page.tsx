@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import WordMap from '@/components/WordMap'
+import Header from '@/components/Header'
 
 export const metadata: Metadata = {
   title: 'Word Map',
@@ -9,6 +10,25 @@ export const metadata: Metadata = {
 
 export default async function MapPage() {
   const supabase = await createClient()
+
+  // Get user info for header
+  const { data: { user } } = await supabase.auth.getUser()
+  let unreadCount = 0
+  let isAdmin = false
+  if (user) {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('read', false)
+    unreadCount = count || 0
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+    isAdmin = profile?.is_admin || false
+  }
 
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
@@ -31,8 +51,13 @@ export default async function MapPage() {
   }))
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-5xl mx-auto px-4 py-10">
+    <main className="max-w-5xl mx-auto min-h-screen border-x border-zinc-800">
+      <Header
+        user={user ? { id: user.id, email: user.email } : null}
+        unreadNotifications={unreadCount}
+        isAdmin={isAdmin}
+      />
+      <div className="px-4 py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">
             🗺️ Word Map
@@ -49,6 +74,6 @@ export default async function MapPage() {
           <WordMap pins={pins} />
         </div>
       </div>
-    </div>
+    </main>
   )
 }
