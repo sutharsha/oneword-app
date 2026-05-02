@@ -9,6 +9,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { startOfDay, subDays } from 'date-fns'
 import type { Metadata } from 'next'
+import type { User } from '@supabase/supabase-js'
 import PromptTimer from '@/components/PromptTimer'
 import Footer from '@/components/Footer'
 
@@ -43,6 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 type FilterType = 'today' | 'week' | 'all' | 'following' | 'popular'
+type TodayPrompt = { id: string; question: string; active_date: string } | null
 
 const FILTERS: { key: FilterType; label: string; authOnly?: boolean }[] = [
   { key: 'today', label: 'Today' },
@@ -52,37 +54,41 @@ const FILTERS: { key: FilterType; label: string; authOnly?: boolean }[] = [
   { key: 'all', label: 'All Time' },
 ]
 
-async function Feed({ filter }: { filter: FilterType }) {
+async function Feed({
+  filter,
+  user,
+  todaysPrompt,
+}: {
+  filter: FilterType
+  user: User | null
+  todaysPrompt: TodayPrompt
+}) {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const hasPostedTodayPromise = user && todaysPrompt
+    ? supabase
+        .from('words')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('prompt_id', todaysPrompt.id)
+        .limit(1)
+        .maybeSingle()
+    : Promise.resolve({ data: null })
 
-  // Get today's prompt
-  const { data: prompts } = await supabase.rpc('get_todays_prompt')
-  const todaysPrompt = prompts?.[0] || null
+  const followsPromise = filter === 'following' && user
+    ? supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id)
+    : Promise.resolve({ data: [] })
 
-  // Check if user already posted to today's prompt
-  let hasPostedToday = false
-  if (user && todaysPrompt) {
-    const { data: existingPost } = await supabase
-      .from('words')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('prompt_id', todaysPrompt.id)
-      .limit(1)
-      .maybeSingle()
-    hasPostedToday = !!existingPost
-  }
+  const [{ data: existingPost }, { data: follows }] = await Promise.all([
+    hasPostedTodayPromise,
+    followsPromise,
+  ])
 
-  // For "following" filter, get list of followed user IDs
-  let followingIds: string[] = []
-  if (filter === 'following' && user) {
-    const { data: follows } = await supabase
-      .from('follows')
-      .select('following_id')
-      .eq('follower_id', user.id)
-    followingIds = follows?.map((f) => f.following_id) || []
-  }
+  const hasPostedToday = !!existingPost
+  const followingIds = follows?.map((f) => f.following_id) || []
 
   // Build words query with filter
   let query = supabase
@@ -245,32 +251,35 @@ export default async function Home({
   const params = await searchParams
   const filter = (['today', 'week', 'all', 'following', 'popular'].includes(params.filter || '') ? params.filter : 'today') as FilterType
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
-  // Get unread notification count and admin status
-  let unreadCount = 0
-  let isAdmin = false
-  if (user) {
-    const { count } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('read', false)
-    unreadCount = count || 0
+  const [{ data: { user } }, { data: prompts }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.rpc('get_todays_prompt'),
+  ])
+  const todaysPrompt = prompts?.[0] || null
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
-    isAdmin = profile?.is_admin || false
-  }
+  const [{ count: unreadCount }, { data: profile }] = user
+    ? await Promise.all([
+        supabase
+          .from('notifications')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('read', false),
+        supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single(),
+      ])
+    : [{ count: 0 }, { data: null }]
+
+  const isAdmin = profile?.is_admin || false
 
   return (
     <main className="max-w-lg mx-auto min-h-screen border-x border-zinc-800">
       <Header
         user={user ? { id: user.id, email: user.email } : null}
-        unreadNotifications={unreadCount}
+        unreadNotifications={unreadCount || 0}
         isAdmin={isAdmin}
       />
 
@@ -301,7 +310,7 @@ export default async function Home({
       )}
 
       <Suspense fallback={<FeedSkeleton />}>
-        <Feed filter={filter} />
+        <Feed filter={filter} user={user} todaysPrompt={todaysPrompt} />
       </Suspense>
 
       <Footer />
