@@ -44,13 +44,10 @@ export default async function Home({
   const filter = normalizeFilter(params.filter)
   const supabase = await createClient()
 
-  const [{ data: { user } }, todaysPrompt] = await Promise.all([
-    supabase.auth.getUser(),
-    getTodaysPrompt(),
-  ])
+  const { data: { user } } = await supabase.auth.getUser()
 
   const [feedData, { count: unreadCount }, { data: profile }] = await Promise.all([
-    getFeedData({ filter, user, todaysPrompt }),
+    getFeedData({ filter, user }),
     user
       ? supabase
           .from('notifications')

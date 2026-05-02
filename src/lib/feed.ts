@@ -1,4 +1,3 @@
-import { startOfDay, subDays } from 'date-fns'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 
@@ -35,27 +34,28 @@ export type FeedData = {
   words: FeedWord[]
 }
 
-type ProfileRow = {
-  id: string
-  username: string | null
-  display_name: string | null
-  avatar_url: string | null
-  current_streak: number | null
-}
-
-type WordRow = {
+type FeedRpcWord = {
   id: string
   word: string
   user_id: string
   prompt_id: string | null
   created_at: string
-  profiles: ProfileRow | ProfileRow[] | null
+  profile?: {
+    username?: string | null
+    display_name?: string | null
+    avatar_url?: string | null
+    current_streak?: number | null
+  } | null
+  reaction_counts?: Record<string, number> | null
+  reaction_total?: number | null
+  user_reaction?: string | null
 }
 
-type ReactionRow = {
-  word_id: string
-  emoji: string
-  user_id: string
+type FeedRpcPayload = {
+  todaysPrompt?: TodayPrompt
+  hasPostedToday?: boolean
+  followingEmpty?: boolean
+  words?: FeedRpcWord[]
 }
 
 export function normalizeFilter(filter?: string | null): FilterType {
@@ -75,108 +75,30 @@ export async function getTodaysPrompt(): Promise<TodayPrompt> {
 export async function getFeedData({
   filter,
   user,
-  todaysPrompt,
 }: {
   filter: FilterType
   user: User | null
-  todaysPrompt: TodayPrompt
+  todaysPrompt?: TodayPrompt
 }): Promise<FeedData> {
   const supabase = await createClient()
 
-  const hasPostedTodayPromise = user && todaysPrompt
-    ? supabase
-        .from('words')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('prompt_id', todaysPrompt.id)
-        .limit(1)
-        .maybeSingle()
-    : Promise.resolve({ data: null })
-
-  const followsPromise = filter === 'following' && user
-    ? supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', user.id)
-    : Promise.resolve({ data: [] as { following_id: string }[] })
-
-  const [{ data: existingPost }, { data: follows }] = await Promise.all([
-    hasPostedTodayPromise,
-    followsPromise,
-  ])
-
-  const hasPostedToday = !!existingPost
-  const followingIds = follows?.map((f) => f.following_id) || []
-
-  if (filter === 'following' && followingIds.length === 0) {
-    return {
-      filter,
-      user: publicUser(user),
-      todaysPrompt,
-      hasPostedToday,
-      followingEmpty: true,
-      words: [],
-    }
-  }
-
-  let query = supabase
-    .from('words')
-    .select(`
-      id,
-      word,
-      user_id,
-      prompt_id,
-      created_at,
-      profiles (id, username, display_name, avatar_url, current_streak)
-    `)
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  if (filter === 'today' || filter === 'popular') {
-    query = query.gte('created_at', startOfDay(new Date()).toISOString())
-  } else if (filter === 'week') {
-    query = query.gte('created_at', startOfDay(subDays(new Date(), 7)).toISOString())
-  } else if (filter === 'following') {
-    query = query.in('user_id', followingIds)
-  }
-
-  const { data: words } = await query
-  const wordRows = (words || []) as WordRow[]
-
-  const wordIds = wordRows.map((w) => w.id)
-  const { data: reactions } = wordIds.length
-    ? await supabase
-        .from('reactions')
-        .select('word_id, emoji, user_id')
-        .in('word_id', wordIds)
-    : { data: [] as ReactionRow[] }
-
-  const reactionRows = (reactions || []) as ReactionRow[]
-  const reactionMap: Record<string, Record<string, number>> = {}
-  const userReactionMap: Record<string, string | null> = {}
-
-  reactionRows.forEach((r) => {
-    if (!reactionMap[r.word_id]) reactionMap[r.word_id] = {}
-    reactionMap[r.word_id][r.emoji] = (reactionMap[r.word_id][r.emoji] || 0) + 1
-    if (user && r.user_id === user.id) {
-      userReactionMap[r.word_id] = r.emoji
-    }
+  const { data, error } = await supabase.rpc('get_feed', {
+    p_filter: filter,
+    p_user_id: user?.id || null,
   })
 
-  let sortedWords = wordRows
-  if (filter === 'popular' && sortedWords.length > 0) {
-    sortedWords = [...sortedWords].sort((a, b) => {
-      const aTotal = Object.values(reactionMap[a.id] || {}).reduce((sum, n) => sum + n, 0)
-      const bTotal = Object.values(reactionMap[b.id] || {}).reduce((sum, n) => sum + n, 0)
-      return bTotal - aTotal
-    })
+  if (error) {
+    throw error
   }
+
+  const payload = (data || {}) as FeedRpcPayload
+  const words = payload.words || []
 
   let crownWordId: string | null = null
   if (filter === 'today' || filter === 'popular') {
     let maxReactions = 0
-    sortedWords.forEach((w) => {
-      const total = Object.values(reactionMap[w.id] || {}).reduce((sum, n) => sum + n, 0)
+    words.forEach((w) => {
+      const total = w.reaction_total ?? Object.values(w.reaction_counts || {}).reduce((sum, n) => sum + n, 0)
       if (total > maxReactions) {
         maxReactions = total
         crownWordId = w.id
@@ -188,26 +110,23 @@ export async function getFeedData({
   return {
     filter,
     user: publicUser(user),
-    todaysPrompt,
-    hasPostedToday,
-    followingEmpty: false,
-    words: sortedWords.map((w) => {
-      const profile = Array.isArray(w.profiles) ? w.profiles[0] : w.profiles
-      return {
-        id: w.id,
-        word: w.word,
-        username: profile?.username || 'anonymous',
-        displayName: profile?.display_name || null,
-        avatarUrl: profile?.avatar_url || null,
-        createdAt: w.created_at,
-        reactionCounts: reactionMap[w.id] || {},
-        userReaction: userReactionMap[w.id] || null,
-        currentUserId: user?.id || null,
-        wordUserId: w.user_id,
-        promptId: w.prompt_id,
-        streakCount: profile?.current_streak || 0,
-        isCrowned: w.id === crownWordId,
-      }
-    }),
+    todaysPrompt: payload.todaysPrompt || null,
+    hasPostedToday: !!payload.hasPostedToday,
+    followingEmpty: !!payload.followingEmpty,
+    words: words.map((w) => ({
+      id: w.id,
+      word: w.word,
+      username: w.profile?.username || 'anonymous',
+      displayName: w.profile?.display_name || null,
+      avatarUrl: w.profile?.avatar_url || null,
+      createdAt: w.created_at,
+      reactionCounts: w.reaction_counts || {},
+      userReaction: w.user_reaction || null,
+      currentUserId: user?.id || null,
+      wordUserId: w.user_id,
+      promptId: w.prompt_id,
+      streakCount: w.profile?.current_streak || 0,
+      isCrowned: w.id === crownWordId,
+    })),
   }
 }
