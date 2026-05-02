@@ -89,8 +89,8 @@ describe('WordPost', () => {
     const user = userEvent.setup()
     render(<WordPost {...defaultProps} />)
 
-    // When there are reactions and no user reaction, button shows 😶
-    const reactionBtn = screen.getByRole('button', { name: /😶/ })
+    // When there are reactions, button shows the top reaction emoji
+    const reactionBtn = screen.getByRole('button', { name: /🔥/ })
     await user.click(reactionBtn)
 
     // Should see the emoji picker with individual emoji buttons
@@ -103,8 +103,8 @@ describe('WordPost', () => {
     const user = userEvent.setup()
     render(<WordPost {...defaultProps} currentUserId={null} />)
 
-    // Button shows 😶 when reactions exist but user is logged out
-    const reactionBtn = screen.getByRole('button', { name: /😶/ })
+    // Button shows the top reaction emoji when reactions exist, even logged out
+    const reactionBtn = screen.getByRole('button', { name: /🔥/ })
     await user.click(reactionBtn)
 
     // Emoji picker should not appear — only the main reaction button should exist
@@ -133,9 +133,8 @@ describe('WordPost', () => {
     expect(screen.getByText('No')).toBeInTheDocument()
   })
 
-  it('highlights user reaction emoji', () => {
-    render(<WordPost {...defaultProps} userReaction="🔥" />)
-    // The user's reaction should be shown as the button label
-    expect(screen.getByText((content) => content.includes('🔥'))).toBeInTheDocument()
+  it('shows top reaction emoji in the compact button', () => {
+    render(<WordPost {...defaultProps} userReaction="❤️" />)
+    expect(screen.getByRole('button', { name: /🔥/ })).toBeInTheDocument()
   })
 })

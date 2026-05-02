@@ -167,6 +167,13 @@ export default function WordPost({
   if (deleted) return null
 
   const totalReactions = Object.values(reactionCounts).reduce((a, b) => a + b, 0)
+  const topReactionEmoji = Object.entries(reactionCounts)
+    .filter(([, count]) => count > 0)
+    .sort(([emojiA, countA], [emojiB, countB]) => {
+      if (countB !== countA) return countB - countA
+      return REACTION_EMOJIS.indexOf(emojiA as ReactionEmoji) - REACTION_EMOJIS.indexOf(emojiB as ReactionEmoji)
+    })[0]?.[0]
+  const reactionButtonEmoji = totalReactions > 0 ? topReactionEmoji || '😶' : '+'
 
   return (
     <div className="border-b border-zinc-800 px-4 py-5 hover:bg-zinc-950 transition-colors">
@@ -218,7 +225,7 @@ export default function WordPost({
                   : 'text-zinc-600 cursor-default'
               }`}
             >
-              {userReaction || (totalReactions > 0 ? '😶' : '+')}
+              {reactionButtonEmoji}
               {totalReactions > 0 && (
                 <span className="ml-1 text-zinc-500">{totalReactions}</span>
               )}
