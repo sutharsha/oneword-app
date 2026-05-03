@@ -50,6 +50,9 @@ export default function AuthButton({ user }: AuthButtonProps) {
       provider: 'google',
       options: {
         redirectTo: `${siteUrl}/auth/callback`,
+        queryParams: {
+          prompt: 'select_account',
+        },
       },
     })
     if (error) {
