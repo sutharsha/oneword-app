@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import WordPost from './WordPost'
 
@@ -59,82 +59,77 @@ describe('WordPost', () => {
   })
 
   it('renders the word in bold', () => {
-    render(<WordPost {...defaultProps} />)
-    expect(screen.getByText('serenity')).toBeInTheDocument()
+    const view = render(<WordPost {...defaultProps} />)
+    expect(view.getByText('serenity')).toBeInTheDocument()
   })
 
   it('renders username and display name', () => {
-    render(<WordPost {...defaultProps} />)
-    expect(screen.getByText('Test User')).toBeInTheDocument()
-    expect(screen.getByText('@testuser')).toBeInTheDocument()
+    const view = render(<WordPost {...defaultProps} />)
+    expect(view.getByText('Test User')).toBeInTheDocument()
+    expect(view.getByText('@testuser')).toBeInTheDocument()
   })
 
   it('renders streak badge for streaks >= 2', () => {
-    render(<WordPost {...defaultProps} />)
-    expect(screen.getByText('3d')).toBeInTheDocument()
+    const view = render(<WordPost {...defaultProps} />)
+    expect(view.getByText('3d')).toBeInTheDocument()
   })
 
   it('does not render streak badge for streaks < 2', () => {
-    render(<WordPost {...defaultProps} streakCount={1} />)
-    expect(screen.queryByText('1d')).not.toBeInTheDocument()
+    const view = render(<WordPost {...defaultProps} streakCount={1} />)
+    expect(view.queryByText('1d')).not.toBeInTheDocument()
   })
 
   it('shows total reaction count', () => {
-    render(<WordPost {...defaultProps} />)
-    // Total reactions: 2 + 1 = 3
-    expect(screen.getByText('3')).toBeInTheDocument()
+    const view = render(<WordPost {...defaultProps} />)
+    expect(view.getByText('3')).toBeInTheDocument()
   })
 
   it('shows reaction picker when reaction button is clicked', async () => {
     const user = userEvent.setup()
-    render(<WordPost {...defaultProps} />)
+    const view = render(<WordPost {...defaultProps} />)
 
-    // When there are reactions, button shows the top reaction emoji
-    const reactionBtn = screen.getByRole('button', { name: /🔥/ })
+    const reactionBtn = view.getByRole('button', { name: /🔥/ })
     await user.click(reactionBtn)
 
-    // Should see the emoji picker with individual emoji buttons
-    expect(screen.getByRole('button', { name: /👀/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /💀/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /🤔/ })).toBeInTheDocument()
+    expect(view.getByRole('button', { name: /👀/ })).toBeInTheDocument()
+    expect(view.getByRole('button', { name: /💀/ })).toBeInTheDocument()
+    expect(view.getByRole('button', { name: /🤔/ })).toBeInTheDocument()
   })
 
   it('does not show reaction picker for logged-out users', async () => {
     const user = userEvent.setup()
-    render(<WordPost {...defaultProps} currentUserId={null} />)
+    const view = render(<WordPost {...defaultProps} currentUserId={null} />)
 
-    // Button shows the top reaction emoji when reactions exist, even logged out
-    const reactionBtn = screen.getByRole('button', { name: /🔥/ })
+    const reactionBtn = view.getByRole('button', { name: /🔥/ })
     await user.click(reactionBtn)
 
-    // Emoji picker should not appear — only the main reaction button should exist
-    const buttons = screen.getAllByRole('button')
-    const emojiPickerButtons = buttons.filter((b) => b.textContent?.includes('👀'))
+    const buttons = view.getAllByRole('button')
+    const emojiPickerButtons = buttons.filter((button: HTMLElement) => button.textContent?.includes('👀'))
     expect(emojiPickerButtons).toHaveLength(0)
   })
 
   it('shows delete button for post owner', () => {
-    render(<WordPost {...defaultProps} currentUserId="user-456" wordUserId="user-456" />)
-    expect(screen.getByTitle('Delete')).toBeInTheDocument()
+    const view = render(<WordPost {...defaultProps} currentUserId="user-456" wordUserId="user-456" />)
+    expect(view.getByTitle('Delete')).toBeInTheDocument()
   })
 
   it('does not show delete button for non-owners', () => {
-    render(<WordPost {...defaultProps} />)
-    expect(screen.queryByTitle('Delete')).not.toBeInTheDocument()
+    const view = render(<WordPost {...defaultProps} />)
+    expect(view.queryByTitle('Delete')).not.toBeInTheDocument()
   })
 
   it('shows delete confirmation when delete button clicked', async () => {
     const user = userEvent.setup()
-    render(<WordPost {...defaultProps} currentUserId="user-456" wordUserId="user-456" />)
+    const view = render(<WordPost {...defaultProps} currentUserId="user-456" wordUserId="user-456" />)
 
-    await user.click(screen.getByTitle('Delete'))
-    expect(screen.getByText('Delete?')).toBeInTheDocument()
-    expect(screen.getByText('Yes')).toBeInTheDocument()
-    expect(screen.getByText('No')).toBeInTheDocument()
+    await user.click(view.getByTitle('Delete'))
+    expect(view.getByText('Delete?')).toBeInTheDocument()
+    expect(view.getByText('Yes')).toBeInTheDocument()
+    expect(view.getByText('No')).toBeInTheDocument()
   })
 
   it('shows top reaction emoji in the compact button', () => {
-    render(<WordPost {...defaultProps} userReaction="❤️" />)
-    expect(screen.getByRole('button', { name: /🔥/ })).toBeInTheDocument()
+    const view = render(<WordPost {...defaultProps} userReaction="❤️" />)
+    expect(view.getByRole('button', { name: /🔥/ })).toBeInTheDocument()
   })
 })

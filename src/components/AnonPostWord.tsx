@@ -10,6 +10,7 @@ import Link from 'next/link'
 interface AnonPostWordProps {
   promptId: string | null
   promptQuestion: string | null
+  onPosted?: () => void
 }
 
 const PENDING_WORD_KEY = 'oneword_pending'
@@ -29,7 +30,7 @@ export function clearPendingWord() {
   localStorage.removeItem(PENDING_WORD_KEY)
 }
 
-export default function AnonPostWord({ promptId, promptQuestion }: AnonPostWordProps) {
+export default function AnonPostWord({ promptId, promptQuestion, onPosted }: AnonPostWordProps) {
   const [word, setWord] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showSignup, setShowSignup] = useState(false)
@@ -93,7 +94,7 @@ export default function AnonPostWord({ promptId, promptQuestion }: AnonPostWordP
 
       // If auto-confirmed (or session exists), post the word
       if (data.user && data.session) {
-        await postPendingWord(supabase, data.user.id)
+        await postPendingWord()
       } else {
         toast('Check your email to confirm, then your word will be saved!')
         clearPendingWord()
@@ -109,7 +110,7 @@ export default function AnonPostWord({ promptId, promptQuestion }: AnonPostWordP
       }
 
       if (data.user) {
-        await postPendingWord(supabase, data.user.id)
+        await postPendingWord()
       }
     }
 
@@ -117,7 +118,7 @@ export default function AnonPostWord({ promptId, promptQuestion }: AnonPostWordP
     submittedRef.current = false
   }
 
-  const postPendingWord = async (_supabase: ReturnType<typeof createClient>, _userId: string) => {
+  const postPendingWord = async () => {
     if (!pendingWord || !promptId) return
 
     // Post via server API to capture IP + geolocation
@@ -142,6 +143,7 @@ export default function AnonPostWord({ promptId, promptQuestion }: AnonPostWordP
     clearPendingWord()
     setPosted(true)
     setShowSignup(false)
+    onPosted?.()
     router.refresh()
   }
 
@@ -156,7 +158,7 @@ export default function AnonPostWord({ promptId, promptQuestion }: AnonPostWordP
         )}
         <div className="text-center py-3">
           <p className="text-zinc-400 text-sm">Welcome to OneWord! 🎉</p>
-          <p className="text-zinc-600 text-xs mt-1">Come back tomorrow for a new prompt.</p>
+          <p className="text-zinc-600 text-xs mt-1">Your answer unlocked today&apos;s feed below.</p>
         </div>
       </div>
     )

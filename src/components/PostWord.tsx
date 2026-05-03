@@ -7,10 +7,19 @@ import { createRateLimiter } from '@/lib/rate-limit'
 import { validateWord } from '@/lib/validation'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
+import ShareButton from '@/components/ShareButton'
 
 interface SameWordMatch {
   username: string
-  display_name: string | null
+  displayName: string | null
+}
+
+interface PostReveal {
+  word: string
+  totalAnswers: number
+  sameWordCount: number
+  username: string | null
+  sameWordMatches?: SameWordMatch[]
 }
 
 interface PostWordProps {
@@ -18,23 +27,36 @@ interface PostWordProps {
   promptId: string | null
   promptQuestion: string | null
   hasPostedToday: boolean
+  initialReveal?: PostReveal | null
+  onPosted?: () => void
 }
 
-export default function PostWord({ userId, promptId, promptQuestion, hasPostedToday }: PostWordProps) {
+export default function PostWord({
+  userId,
+  promptId,
+  promptQuestion,
+  hasPostedToday,
+  initialReveal = null,
+  onPosted,
+}: PostWordProps) {
   const [word, setWord] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [posting, setPosting] = useState(false)
   const [answered, setAnswered] = useState(hasPostedToday)
   const [sameWordMatches, setSameWordMatches] = useState<SameWordMatch[]>([])
-  const [postedWord, setPostedWord] = useState<string | null>(null)
+  const [reveal, setReveal] = useState<PostReveal | null>(initialReveal)
   const router = useRouter()
   const { toast } = useToast()
   const rateLimiter = useRef(createRateLimiter(3, 60_000))
 
-  // Sync with server prop
   useEffect(() => {
     setAnswered(hasPostedToday)
   }, [hasPostedToday])
+
+  useEffect(() => {
+    setReveal(initialReveal)
+    setSameWordMatches(initialReveal?.sameWordMatches || [])
+  }, [initialReveal])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,15 +97,22 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
       return
     }
 
+    const nextReveal: PostReveal = {
+      word: result.reveal?.word || trimmed,
+      totalAnswers: result.reveal?.totalAnswers || 0,
+      sameWordCount: result.reveal?.sameWordCount || 1,
+      username: result.reveal?.username || null,
+    }
+
     toast(`"${trimmed}" — said.`)
 
-    setPostedWord(trimmed)
+    setReveal(nextReveal)
     setWord('')
     setPosting(false)
     setAnswered(true)
+    onPosted?.()
 
-    // Find others who posted the same word for this prompt
-    if (promptId) {
+    if (promptId && (nextReveal.sameWordCount || 0) > 1) {
       const supabase = createClient()
       const { data: matches } = await supabase
         .from('words')
@@ -99,11 +128,15 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
             const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles
             return {
               username: profile?.username || 'anonymous',
-              display_name: profile?.display_name || null,
+              displayName: profile?.display_name || null,
             }
           })
         )
+      } else {
+        setSameWordMatches([])
       }
+    } else {
+      setSameWordMatches([])
     }
 
     try {
@@ -149,30 +182,67 @@ export default function PostWord({ userId, promptId, promptQuestion, hasPostedTo
         </form>
       ) : (
         <div className="text-center py-3">
-          <p className="text-zinc-400 text-sm">You already answered today.</p>
-          <p className="text-zinc-600 text-xs mt-1">Come back tomorrow for a new prompt.</p>
-
-          {/* Same Word connection */}
-          {sameWordMatches.length > 0 && postedWord && (
-            <div className="mt-3 p-3 bg-purple-500/5 border border-purple-500/20 rounded-xl animate-fade-in">
-              <p className="text-sm text-purple-400 font-medium">
-                You and {sameWordMatches.length} {sameWordMatches.length === 1 ? 'other' : 'others'} said &ldquo;{postedWord}&rdquo;
-              </p>
-              <div className="flex flex-wrap justify-center gap-1.5 mt-2">
-                {sameWordMatches.slice(0, 5).map((m) => (
-                  <Link
-                    key={m.username}
-                    href={`/profile/${m.username}`}
-                    className="text-xs text-zinc-400 hover:text-purple-400 transition-colors"
-                  >
-                    @{m.username}
-                  </Link>
-                ))}
-                {sameWordMatches.length > 5 && (
-                  <span className="text-xs text-zinc-500">+{sameWordMatches.length - 5} more</span>
-                )}
+          {reveal ? (
+            <div className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-4 text-left animate-fade-in">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.22em] text-purple-300">Unlocked</p>
+                  <p className="mt-2 text-3xl font-black text-white break-words">{reveal.word}</p>
+                  <p className="mt-2 text-sm text-zinc-300">
+                    {reveal.sameWordCount > 1
+                      ? `${reveal.sameWordCount} people said it so far.`
+                      : 'Unique so far.'}
+                  </p>
+                </div>
+                <ShareButton
+                  word={reveal.word}
+                  username={reveal.username}
+                  promptId={promptId}
+                  promptQuestion={promptQuestion}
+                  label="Share"
+                  className="shrink-0 rounded-full border border-purple-400/30 px-4 py-2 text-sm font-semibold text-purple-200 transition-colors hover:bg-purple-400/10"
+                />
               </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/5 bg-black/30 p-3">
+                  <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">Answers</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{reveal.totalAnswers}</p>
+                </div>
+                <div className="rounded-xl border border-white/5 bg-black/30 p-3">
+                  <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">Compared to crowd</p>
+                  <p className="mt-2 text-sm font-semibold text-white">
+                    {reveal.sameWordCount > 1 ? 'Common enough to echo.' : 'Standing alone.'}
+                  </p>
+                </div>
+              </div>
+
+              {sameWordMatches.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-purple-300">
+                    Same word energy with {sameWordMatches.length} {sameWordMatches.length === 1 ? 'other person' : 'others'}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {sameWordMatches.map((m) => (
+                      <Link
+                        key={m.username}
+                        href={`/profile/${m.username}`}
+                        className="rounded-full bg-black/30 px-3 py-1 text-xs text-zinc-300 transition-colors hover:text-purple-300"
+                      >
+                        @{m.username}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p className="mt-4 text-xs text-zinc-500">The feed is live below. Come back tomorrow for a new prompt.</p>
             </div>
+          ) : (
+            <>
+              <p className="text-zinc-400 text-sm">You already answered today.</p>
+              <p className="text-zinc-600 text-xs mt-1">Come back tomorrow for a new prompt.</p>
+            </>
           )}
         </div>
       )}

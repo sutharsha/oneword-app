@@ -4,49 +4,67 @@ import { useState } from 'react'
 
 interface ShareButtonProps {
   word: string
-  username: string
-  wordId: string
+  username?: string | null
+  promptId?: string | null
+  promptQuestion?: string | null
+  label?: string
+  className?: string
 }
 
-export default function ShareButton({ word, username, wordId }: ShareButtonProps) {
+export default function ShareButton({
+  word,
+  username,
+  promptId,
+  promptQuestion,
+  label,
+  className,
+}: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleShare = async () => {
-    const challengeUrl = new URL(`/challenge/${wordId}`, window.location.origin)
-    challengeUrl.searchParams.set('from', username)
+    const shareUrl = promptId
+      ? new URL(`/challenge/${promptId}`, window.location.origin)
+      : new URL(`/profile/${username || 'anonymous'}`, window.location.origin)
 
-    const url = challengeUrl.toString()
-    const text = `I said ${word} to today prompt on OneWord. What would YOU say? ${url}`
+    if (promptId && username) {
+      shareUrl.searchParams.set('from', username)
+    }
 
-    // Try native share on mobile
+    const url = shareUrl.toString()
+    const text = promptQuestion
+      ? `Today on OneWord: "${promptQuestion}" I said "${word}". What would you say? ${url}`
+      : `I said "${word}" on OneWord. What would you say? ${url}`
+
     if (navigator.share) {
       try {
-        await navigator.share({ text })
+        await navigator.share({
+          title: 'OneWord',
+          text,
+          url,
+        })
         return
       } catch {
-        // User cancelled or share failed, fall through to clipboard
+        // Share cancelled or failed. Fall through to clipboard.
       }
     }
 
-    // Fallback: copy link
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Clipboard failed silently
+      // Clipboard access can fail in unsupported browsers.
     }
   }
 
   return (
     <button
+      type="button"
       onClick={handleShare}
-      className="text-sm px-2 py-1 rounded-full text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
-      title="Share"
+      className={className || 'text-sm px-2 py-1 rounded-full text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors'}
+      title={label || 'Share'}
     >
-      {copied ? (
-        <span className="text-green-400 text-xs">Copied!</span>
-      ) : (
+      {copied ? <span className="text-green-400 text-xs">Copied!</span> : label || (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"

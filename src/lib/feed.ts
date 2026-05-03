@@ -7,7 +7,21 @@ export type TodayPrompt = { id: string; question: string; active_date: string } 
 export type FeedUser = {
   id: string
   email?: string
+  username: string | null
 } | null
+
+export type SameWordMatch = {
+  username: string
+  displayName: string | null
+}
+
+export type TodaysReveal = {
+  userWord: string
+  totalAnswers: number
+  sameWordCount: number
+  sameWordMatches: SameWordMatch[]
+  username: string | null
+}
 
 export type FeedWord = {
   id: string
@@ -31,6 +45,7 @@ export type FeedData = {
   todaysPrompt: TodayPrompt
   hasPostedToday: boolean
   followingEmpty: boolean
+  todaysReveal: TodaysReveal | null
   words: FeedWord[]
 }
 
@@ -62,8 +77,19 @@ export function normalizeFilter(filter?: string | null): FilterType {
   return (['today', 'week', 'all', 'following', 'popular'].includes(filter || '') ? filter : 'today') as FilterType
 }
 
-export function publicUser(user: User | null): FeedUser {
-  return user ? { id: user.id, email: user.email } : null
+function mapSameWordMatches(matches: Array<{ profiles?: { username?: string | null; display_name?: string | null } | { username?: string | null; display_name?: string | null }[] | null }> | null | undefined): SameWordMatch[] {
+  return (matches || []).map((match) => {
+    const profile = Array.isArray(match.profiles) ? match.profiles[0] : match.profiles
+
+    return {
+      username: profile?.username || 'anonymous',
+      displayName: profile?.display_name || null,
+    }
+  })
+}
+
+export function publicUser(user: User | null, username?: string | null): FeedUser {
+  return user ? { id: user.id, email: user.email, username: username || null } : null
 }
 
 export async function getTodaysPrompt(): Promise<TodayPrompt> {
@@ -82,10 +108,19 @@ export async function getFeedData({
 }): Promise<FeedData> {
   const supabase = await createClient()
 
-  const { data, error } = await supabase.rpc('get_feed', {
-    p_filter: filter,
-    p_user_id: user?.id || null,
-  })
+  const [{ data, error }, { data: profile }] = await Promise.all([
+    supabase.rpc('get_feed', {
+      p_filter: filter,
+      p_user_id: user?.id || null,
+    }),
+    user
+      ? supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
 
   if (error) {
     throw error
@@ -93,6 +128,46 @@ export async function getFeedData({
 
   const payload = (data || {}) as FeedRpcPayload
   const words = payload.words || []
+  let todaysReveal: TodaysReveal | null = null
+
+  if (user && payload.hasPostedToday && payload.todaysPrompt?.id) {
+    const promptId = payload.todaysPrompt.id
+    const { data: currentWord } = await supabase
+      .from('words')
+      .select('word')
+      .eq('user_id', user.id)
+      .eq('prompt_id', promptId)
+      .maybeSingle()
+
+    if (currentWord?.word) {
+      const [{ count: totalAnswers }, { count: sameWordCount }, { data: matches }] = await Promise.all([
+        supabase
+          .from('words')
+          .select('id', { count: 'exact', head: true })
+          .eq('prompt_id', promptId),
+        supabase
+          .from('words')
+          .select('id', { count: 'exact', head: true })
+          .eq('prompt_id', promptId)
+          .ilike('word', currentWord.word),
+        supabase
+          .from('words')
+          .select('profiles (username, display_name)')
+          .eq('prompt_id', promptId)
+          .ilike('word', currentWord.word)
+          .neq('user_id', user.id)
+          .limit(5),
+      ])
+
+      todaysReveal = {
+        userWord: currentWord.word,
+        totalAnswers: totalAnswers || 0,
+        sameWordCount: sameWordCount || 0,
+        sameWordMatches: mapSameWordMatches(matches),
+        username: profile?.username || null,
+      }
+    }
+  }
 
   let crownWordId: string | null = null
   if (filter === 'today' || filter === 'popular') {
@@ -109,10 +184,11 @@ export async function getFeedData({
 
   return {
     filter,
-    user: publicUser(user),
+    user: publicUser(user, profile?.username || null),
     todaysPrompt: payload.todaysPrompt || null,
     hasPostedToday: !!payload.hasPostedToday,
     followingEmpty: !!payload.followingEmpty,
+    todaysReveal,
     words: words.map((w) => ({
       id: w.id,
       word: w.word,

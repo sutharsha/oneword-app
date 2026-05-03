@@ -1,43 +1,33 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import PostWord from './PostWord'
 
-// Mock next/navigation
+const refresh = vi.fn()
+const mockToast = vi.fn()
+const mockMatchSelect = vi.fn()
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
+  useRouter: () => ({ refresh }),
 }))
 
-// Mock supabase client
-const mockInsert = vi.fn()
-const mockDelete = vi.fn()
-const mockSelect = vi.fn()
-
-const chainable = () => {
-  const chain: Record<string, unknown> = {}
-  chain.eq = () => chain
-  chain.neq = () => chain
-  chain.ilike = () => chain
-  chain.limit = () => mockSelect()
-  return chain
-}
+vi.mock('@/components/Toast', () => ({
+  useToast: () => ({ toast: mockToast }),
+}))
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
-    from: (table: string) => {
-      if (table === 'words') {
-        return {
-          insert: mockInsert,
-          select: () => chainable(),
-          delete: () => ({
-            eq: () => ({
-              eq: mockDelete,
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          ilike: () => ({
+            neq: () => ({
+              limit: () => mockMatchSelect(),
             }),
           }),
-        }
-      }
-      return {}
-    },
+        }),
+      }),
+    }),
   }),
 }))
 
@@ -51,103 +41,92 @@ describe('PostWord', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockInsert.mockResolvedValue({ error: null })
-    mockSelect.mockResolvedValue({ data: [] })
+    mockMatchSelect.mockResolvedValue({ data: [] })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        reveal: {
+          word: 'blue',
+          totalAnswers: 12,
+          sameWordCount: 1,
+          username: 'sam',
+        },
+      }),
+    }))
   })
 
   it('renders the prompt question', () => {
-    render(<PostWord {...defaultProps} />)
-    expect(screen.getByText('What is your favorite color?')).toBeInTheDocument()
+    const view = render(<PostWord {...defaultProps} />)
+    expect(view.getByText('What is your favorite color?')).toBeInTheDocument()
   })
 
   it('renders the input and submit button when user has not posted', () => {
-    render(<PostWord {...defaultProps} />)
-    expect(screen.getByPlaceholderText('One word...')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Say' })).toBeInTheDocument()
+    const view = render(<PostWord {...defaultProps} />)
+    expect(view.getByPlaceholderText('One word...')).toBeInTheDocument()
+    expect(view.getByRole('button', { name: 'Say' })).toBeInTheDocument()
   })
 
-  it('shows "already answered" message when hasPostedToday is true', () => {
-    render(<PostWord {...defaultProps} hasPostedToday={true} />)
-    expect(screen.getByText('You already answered today.')).toBeInTheDocument()
-    expect(screen.queryByPlaceholderText('One word...')).not.toBeInTheDocument()
-  })
+  it('shows the reveal panel when initial reveal data exists', () => {
+    const view = render(
+      <PostWord
+        {...defaultProps}
+        hasPostedToday={true}
+        initialReveal={{
+          word: 'blue',
+          totalAnswers: 12,
+          sameWordCount: 1,
+          username: 'sam',
+        }}
+      />
+    )
 
-  it('disables submit button when input is empty', () => {
-    render(<PostWord {...defaultProps} />)
-    expect(screen.getByRole('button', { name: 'Say' })).toBeDisabled()
-  })
-
-  it('enables submit button when input has text', async () => {
-    const user = userEvent.setup()
-    render(<PostWord {...defaultProps} />)
-
-    await user.type(screen.getByPlaceholderText('One word...'), 'blue')
-    expect(screen.getByRole('button', { name: 'Say' })).toBeEnabled()
+    expect(view.getByText('Unlocked')).toBeInTheDocument()
+    expect(view.getByText('blue')).toBeInTheDocument()
+    expect(view.getByText('Unique so far.')).toBeInTheDocument()
   })
 
   it('shows validation error for multiple words', async () => {
     const user = userEvent.setup()
-    render(<PostWord {...defaultProps} />)
+    const view = render(<PostWord {...defaultProps} />)
 
-    await user.type(screen.getByPlaceholderText('One word...'), 'two words')
-    await user.click(screen.getByRole('button', { name: 'Say' }))
+    await user.type(view.getByPlaceholderText('One word...'), 'two words')
+    await user.click(view.getByRole('button', { name: 'Say' }))
 
-    expect(screen.getByText('One word only.')).toBeInTheDocument()
+    expect(view.getByText('One word only.')).toBeInTheDocument()
   })
 
-  it('shows validation error for special characters', async () => {
+  it('submits through the API and reveals the comparison card', async () => {
     const user = userEvent.setup()
-    render(<PostWord {...defaultProps} />)
+    const onPosted = vi.fn()
 
-    await user.type(screen.getByPlaceholderText('One word...'), 'hello!')
-    await user.click(screen.getByRole('button', { name: 'Say' }))
+    const view = render(<PostWord {...defaultProps} onPosted={onPosted} />)
 
-    expect(screen.getByText('Letters only.')).toBeInTheDocument()
+    await user.type(view.getByPlaceholderText('One word...'), 'Blue')
+    await user.click(view.getByRole('button', { name: 'Say' }))
+
+    expect(await view.findByText('Unlocked')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/words', expect.objectContaining({
+      method: 'POST',
+    }))
+    expect(view.getByText('12')).toBeInTheDocument()
+    expect(view.getByRole('button', { name: 'Share' })).toBeInTheDocument()
+    expect(onPosted).toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalled()
   })
 
-  it('clears error when user types', async () => {
-    const user = userEvent.setup()
-    render(<PostWord {...defaultProps} />)
-
-    // Trigger an error
-    await user.type(screen.getByPlaceholderText('One word...'), 'two words')
-    await user.click(screen.getByRole('button', { name: 'Say' }))
-    expect(screen.getByText('One word only.')).toBeInTheDocument()
-
-    // Type something new — error should clear
-    await user.type(screen.getByPlaceholderText('One word...'), 'x')
-    expect(screen.queryByText('One word only.')).not.toBeInTheDocument()
-  })
-
-  it('calls supabase insert on valid submission', async () => {
-    const user = userEvent.setup()
-    render(<PostWord {...defaultProps} />)
-
-    await user.type(screen.getByPlaceholderText('One word...'), 'blue')
-    await user.click(screen.getByRole('button', { name: 'Say' }))
-
-    expect(mockInsert).toHaveBeenCalledWith({
-      user_id: 'user-123',
-      word: 'blue',
-      prompt_id: 'prompt-456',
-    })
-  })
-
-  it('shows duplicate post error on constraint violation', async () => {
-    mockInsert.mockResolvedValue({
-      error: { code: '23505', message: 'duplicate' },
-    })
+  it('shows duplicate post error on conflict response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'duplicate' }),
+    }))
 
     const user = userEvent.setup()
-    render(<PostWord {...defaultProps} />)
+    const view = render(<PostWord {...defaultProps} />)
 
-    await user.type(screen.getByPlaceholderText('One word...'), 'blue')
-    await user.click(screen.getByRole('button', { name: 'Say' }))
+    await user.type(view.getByPlaceholderText('One word...'), 'blue')
+    await user.click(view.getByRole('button', { name: 'Say' }))
 
-    // Both the status text and error text appear — check error element specifically
-    const errorEl = screen.getByText('You already answered today.', {
-      selector: '.text-red-400',
-    })
-    expect(errorEl).toBeInTheDocument()
+    expect(await view.findByText('You already answered today.', { selector: '.text-red-400' })).toBeInTheDocument()
   })
 })

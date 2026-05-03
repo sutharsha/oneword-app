@@ -68,10 +68,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
+    const [{ count: totalAnswers }, { count: sameWordCount }, { data: profile }] = await Promise.all([
+      supabase
+        .from('words')
+        .select('id', { count: 'exact', head: true })
+        .eq('prompt_id', prompt_id),
+      supabase
+        .from('words')
+        .select('id', { count: 'exact', head: true })
+        .eq('prompt_id', prompt_id)
+        .ilike('word', trimmed),
+      supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .maybeSingle(),
+    ])
+
     return NextResponse.json({
       success: true,
       id: insertedWord?.id,
       location: geo ? { city: geo.city, country_code: geo.country_code } : null,
+      reveal: {
+        word: trimmed,
+        totalAnswers: totalAnswers || 0,
+        sameWordCount: sameWordCount || 0,
+        username: profile?.username || null,
+      },
     })
   } catch (error) {
     console.error('API error:', error)

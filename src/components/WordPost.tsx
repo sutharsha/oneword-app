@@ -231,7 +231,11 @@ export default function WordPost({
               )}
             </button>
 
-            <ShareButton word={word} username={username} wordId={promptId || id} />
+            <ShareButton
+              word={word}
+              username={username}
+              promptId={promptId}
+            />
 
             {isOwner && !showDeleteConfirm && (
               <button

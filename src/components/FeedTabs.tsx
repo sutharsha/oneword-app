@@ -28,6 +28,13 @@ function FeedContent({ data }: { data: FeedData }) {
           promptId={todaysPrompt?.id || null}
           promptQuestion={todaysPrompt?.question || null}
           hasPostedToday={data.hasPostedToday}
+          initialReveal={data.todaysReveal ? {
+            word: data.todaysReveal.userWord,
+            totalAnswers: data.todaysReveal.totalAnswers,
+            sameWordCount: data.todaysReveal.sameWordCount,
+            sameWordMatches: data.todaysReveal.sameWordMatches,
+            username: data.todaysReveal.username,
+          } : null}
         />
       )}
 
@@ -84,6 +91,20 @@ function FeedContent({ data }: { data: FeedData }) {
   )
 }
 
+function LockedFeedMessage() {
+  return (
+    <div className="border-b border-zinc-800 px-4 pb-6">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 text-center">
+        <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Submit to Reveal</p>
+        <h2 className="mt-3 text-xl font-bold text-white">Say your word before the crowd gets a vote in your head.</h2>
+        <p className="mt-2 text-sm text-zinc-400">
+          Today&apos;s answers, reactions, and comparisons unlock right after you post.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function FeedTabs({ initialData }: { initialData: FeedData }) {
   const [activeFilter, setActiveFilter] = useState<FilterType>(initialData.filter)
   const [cache, setCache] = useState<Record<FilterType, FeedData | undefined>>({
@@ -93,6 +114,11 @@ export default function FeedTabs({ initialData }: { initialData: FeedData }) {
   const [isPending, startTransition] = useTransition()
 
   const user = initialData.user
+  const shouldGateToday = !!initialData.todaysPrompt && !initialData.hasPostedToday
+  const liveCache = useMemo(
+    () => ({ ...cache, [initialData.filter]: initialData }),
+    [cache, initialData]
+  )
   const visibleFilters = useMemo(
     () => FILTERS.filter((filter) => !filter.authOnly || user),
     [user]
@@ -118,7 +144,7 @@ export default function FeedTabs({ initialData }: { initialData: FeedData }) {
     const url = filter === 'today' ? '/' : `/?filter=${filter}`
     window.history.pushState(null, '', url)
 
-    if (cache[filter]) return
+    if (liveCache[filter]) return
 
     setLoadingFilter(filter)
     loadFilter(filter)
@@ -131,7 +157,7 @@ export default function FeedTabs({ initialData }: { initialData: FeedData }) {
       .finally(() => {
         setLoadingFilter((current) => (current === filter ? null : current))
       })
-  }, [cache, loadFilter])
+  }, [liveCache, loadFilter])
 
   useEffect(() => {
     const filtersToPrefetch = visibleFilters
@@ -147,8 +173,34 @@ export default function FeedTabs({ initialData }: { initialData: FeedData }) {
     })
   }, [initialData.filter, loadFilter, visibleFilters])
 
-  const activeData = cache[activeFilter]
+  const activeData = liveCache[activeFilter]
   const isLoading = !activeData || loadingFilter === activeFilter || isPending
+
+  if (shouldGateToday) {
+    return (
+      <>
+        {user ? (
+          <PostWord
+            userId={user.id}
+            promptId={initialData.todaysPrompt?.id || null}
+            promptQuestion={initialData.todaysPrompt?.question || null}
+            hasPostedToday={false}
+          />
+        ) : initialData.todaysPrompt ? (
+          <AnonPostWord
+            promptId={initialData.todaysPrompt.id}
+            promptQuestion={initialData.todaysPrompt.question}
+          />
+        ) : null}
+
+        <div className="px-4 pb-2 flex justify-end">
+          <PromptTimer />
+        </div>
+
+        <LockedFeedMessage />
+      </>
+    )
+  }
 
   return (
     <>
