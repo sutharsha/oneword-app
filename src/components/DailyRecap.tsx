@@ -113,21 +113,21 @@ export default async function DailyRecap() {
           <p className="text-sm text-zinc-400 mb-3">&ldquo;{recap.promptQuestion}&rdquo;</p>
         )}
 
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-1 gap-2 text-center sm:grid-cols-3">
           {/* Total participants */}
-          <div>
+          <div className="rounded-lg border border-white/5 bg-black/20 px-3 py-2">
             <p className="text-xl font-bold text-white">{recap.totalParticipants}</p>
             <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Answered</p>
           </div>
 
           {/* Top word */}
           {recap.topWord ? (
-            <div>
-              <p className="text-xl font-bold text-purple-400">{recap.topWord.word}</p>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Top word</p>
+            <div className="min-w-0 rounded-lg border border-purple-500/10 bg-purple-500/5 px-3 py-2">
+              <p className="break-words text-lg font-bold leading-tight text-purple-400">{recap.topWord.word}</p>
+              <p className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">Top word</p>
             </div>
           ) : (
-            <div>
+            <div className="rounded-lg border border-white/5 bg-black/20 px-3 py-2">
               <p className="text-xl font-bold text-zinc-600">—</p>
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Top word</p>
             </div>
@@ -135,12 +135,12 @@ export default async function DailyRecap() {
 
           {/* Most common word */}
           {recap.mostCommonWord ? (
-            <div>
-              <p className="text-xl font-bold text-white">{recap.mostCommonWord.word}</p>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{recap.mostCommonWord.count}x said</p>
+            <div className="min-w-0 rounded-lg border border-white/5 bg-black/20 px-3 py-2">
+              <p className="break-words text-lg font-bold leading-tight text-white">{recap.mostCommonWord.word}</p>
+              <p className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">{recap.mostCommonWord.count}x said</p>
             </div>
           ) : (
-            <div>
+            <div className="rounded-lg border border-white/5 bg-black/20 px-3 py-2">
               <p className="text-xl font-bold text-zinc-600">—</p>
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Common</p>
             </div>
