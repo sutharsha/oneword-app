@@ -6,8 +6,8 @@ import FollowButton from '@/components/FollowButton'
 import StreakShareButton from '@/components/StreakShareButton'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
-import Image from 'next/image'
 import type { Metadata } from 'next'
+import Avatar from '@/components/Avatar'
 
 export const dynamic = 'force-dynamic'
 
@@ -130,19 +130,15 @@ export default async function ProfilePage({
       {/* Profile header */}
       <div className="p-6 border-b border-zinc-800">
         <div className="flex items-start gap-4">
-          {profile.avatar_url ? (
-            <Image
-              src={profile.avatar_url}
-              alt={profile.username}
-              width={80}
-              height={80}
-              className="w-20 h-20 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl font-bold shrink-0">
-              {(profile.display_name || profile.username || '?')[0].toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            src={profile.avatar_url}
+            alt={profile.username}
+            name={profile.display_name || profile.username}
+            width={80}
+            height={80}
+            className="w-20 h-20 rounded-full object-cover shrink-0"
+            fallbackClassName="w-20 h-20 text-2xl shrink-0"
+          />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold truncate">{profile.display_name || profile.username}</h2>

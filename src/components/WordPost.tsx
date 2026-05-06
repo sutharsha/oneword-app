@@ -7,9 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import { createRateLimiter } from '@/lib/rate-limit'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import ShareButton from '@/components/ShareButton'
 import { useToast } from '@/components/Toast'
+import Avatar from '@/components/Avatar'
 
 interface WordPostProps {
   id: string
@@ -179,19 +179,15 @@ export default function WordPost({
     <div className="border-b border-zinc-800 px-4 py-5 hover:bg-zinc-950 transition-colors">
       <div className="flex items-start gap-3">
         <Link href={`/profile/${username}`} className="shrink-0">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt={username}
-              width={40}
-              height={40}
-              className="w-10 h-10 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm font-bold">
-              {(displayName || username || '?')[0].toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            src={avatarUrl}
+            alt={username}
+            name={displayName || username}
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded-full object-cover"
+            fallbackClassName="w-10 h-10 text-sm"
+          />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

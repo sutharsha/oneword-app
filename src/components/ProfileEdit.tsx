@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import Avatar from '@/components/Avatar'
 
 interface ProfileEditProps {
   userId: string
@@ -107,19 +107,15 @@ export default function ProfileEdit({ userId, displayName, avatarUrl }: ProfileE
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-widest block mb-2">Avatar</label>
             <div className="flex items-center gap-3">
-              {currentAvatar ? (
-                <Image
-                  src={currentAvatar}
-                  alt="Avatar"
-                  width={48}
-                  height={48}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg font-bold">
-                  {(name || '?')[0].toUpperCase()}
-                </div>
-              )}
+              <Avatar
+                src={currentAvatar}
+                alt="Avatar"
+                name={name}
+                width={48}
+                height={48}
+                className="w-12 h-12 rounded-full object-cover"
+                fallbackClassName="w-12 h-12 text-lg"
+              />
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}

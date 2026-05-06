@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Header from '@/components/Header'
-import Image from 'next/image'
+import Avatar from '@/components/Avatar'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
@@ -87,7 +87,6 @@ export default async function LeaderboardPage() {
             const profile = Array.isArray(entry.profiles) ? entry.profiles[0] : entry.profiles
             const name = profile?.display_name || profile?.username || 'anonymous'
             const username = profile?.username || 'anonymous'
-            const avatarInitial = name[0]?.toUpperCase() || '?'
             const reactionsTotal = reactionCountMap[entry.id] || 0
 
             return (
@@ -100,19 +99,15 @@ export default async function LeaderboardPage() {
                 </div>
 
                 <Link href={`/profile/${username}`} className="shrink-0">
-                  {profile?.avatar_url ? (
-                    <Image
-                      src={profile.avatar_url}
-                      alt={username}
-                      width={44}
-                      height={44}
-                      className="h-11 w-11 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-sm font-bold text-white">
-                      {avatarInitial}
-                    </div>
-                  )}
+                  <Avatar
+                    src={profile?.avatar_url}
+                    alt={username}
+                    name={name}
+                    width={44}
+                    height={44}
+                    className="h-11 w-11 rounded-full object-cover"
+                    fallbackClassName="h-11 w-11 text-sm"
+                  />
                 </Link>
 
                 <div className="min-w-0 flex-1">

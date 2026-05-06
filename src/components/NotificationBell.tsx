@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
-import Image from 'next/image'
+import Avatar from '@/components/Avatar'
 
 interface NotificationItem {
   id: string
@@ -139,19 +139,15 @@ export default function NotificationBell({ userId, initialCount }: NotificationB
                   }`}
                   onClick={() => setOpen(false)}
                 >
-                  {n.actor.avatar_url ? (
-                    <Image
-                      src={n.actor.avatar_url}
-                      alt={n.actor.username}
-                      width={32}
-                      height={32}
-                      className="w-8 h-8 rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold shrink-0">
-                      {(n.actor.display_name || n.actor.username || '?')[0].toUpperCase()}
-                    </div>
-                  )}
+                  <Avatar
+                    src={n.actor.avatar_url}
+                    alt={n.actor.username}
+                    name={n.actor.display_name || n.actor.username}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full object-cover shrink-0"
+                    fallbackClassName="w-8 h-8 text-xs shrink-0"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm">
                       <span className="font-semibold">{n.actor.display_name || n.actor.username}</span>{' '}
